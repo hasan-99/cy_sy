@@ -102,12 +102,13 @@
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
                 grid-template-areas:
-                    "calc contacts privacy menu"
-                    "undo undo create create";
+                    "calc contacts admin privacy"
+                    "undo create create menu";
                 gap: .5rem;
             }
             #openCalcBtn { grid-area: calc; }
             #openContactsBtn { grid-area: contacts; }
+            #openAdminBtn { grid-area: admin; }
             #toggleProfitBtn { grid-area: privacy; }
             .undo-controls { grid-area: undo; }
             #openNewModalBtn { grid-area: create; }
@@ -128,8 +129,8 @@
             .summary-grid > div > div:last-child { padding: .7rem; }
             .delivery-panel { padding: .75rem; }
             .delivery-grid { grid-template-columns: 1fr; }
-            #transactionModal { padding: .5rem; align-items: flex-end; }
-            #transactionModal > div { max-height: calc(100dvh - 1rem); border-radius: 1.25rem; }
+            #transactionModal, #adminModal { padding: .5rem; align-items: flex-end; }
+            #transactionModal > div, #adminModal > div { max-height: calc(100dvh - 1rem); border-radius: 1.25rem; }
             #transactionModal form { padding: 1rem; }
             .modal-summary { flex-direction: column; align-items: stretch; gap: .4rem; }
             .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
@@ -210,6 +211,11 @@
                         <button id="openContactsBtn" title="دليل جهات الاتصال" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
                             <i data-lucide="users" class="w-4 h-4 text-emerald-400"></i>
                             <span class="hidden lg:inline">الأسماء</span>
+                        </button>
+
+                        <button id="openAdminBtn" title="لوحة الإدارة المالية" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
+                            <i data-lucide="wallet-cards" class="w-4 h-4 text-amber-400"></i>
+                            <span class="hidden lg:inline">الإدارة</span>
                         </button>
 
                         <!-- Privacy Toggle Button -->
@@ -317,7 +323,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Search and Filter Bar -->
             <div class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="relative flex-1">
@@ -353,7 +358,7 @@
             <div class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
                 <div class="hidden lg:block overflow-x-auto flex-1">
                     <table class="w-full min-w-[1050px] text-right text-sm border-collapse">
-                        <thead class="bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider sticky top-0 z-10">
+                        <thead class="bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="py-4 px-3 w-10 text-center">تفاصيل</th>
                                 <th class="py-4 px-3">التاريخ</th>
@@ -468,19 +473,78 @@
 
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <label class="block text-xs font-black text-slate-700 uppercase">سجل الدفعات المقبوضة (€)</label>
+                        <label class="block text-xs font-black text-slate-700 uppercase">سجل الدفعات المقبوضة من الزبون (€)</label>
                         <button type="button" id="addInstallmentBtn" class="text-xs font-black text-emerald-700 flex items-center gap-1 bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-300">
                             <i data-lucide="plus-circle" class="w-4 h-4"></i> إضافة دفعة
                         </button>
                     </div>
                     <div id="installmentsContainer" class="space-y-2"></div>
                 </div>
-
                 <div class="modal-actions flex items-center justify-end gap-3 pt-4 border-t-2 border-slate-100 shrink-0">
                     <button type="button" id="cancelModalBtn" class="px-5 py-2.5 text-sm font-extrabold text-slate-600 hover:bg-slate-100 rounded-xl transition">إلغاء</button>
                     <button type="submit" class="px-6 py-2.5 text-sm font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl shadow-md transition">حفظ المعاملة</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+
+    <!-- Admin Finance Modal -->
+    <div id="adminModal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border-2 border-slate-200 overflow-hidden my-auto max-h-[95vh] flex flex-col">
+            <div class="bg-slate-900 text-white px-4 sm:px-6 py-4 flex items-center justify-between gap-3 shrink-0">
+                <div>
+                    <p class="text-xs font-black text-amber-300 uppercase tracking-wider">Admin View</p>
+                    <h3 class="text-base sm:text-xl font-black">لوحة الإدارة المالية</h3>
+                </div>
+                <button id="closeAdminBtn" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="p-4 sm:p-6 space-y-5 overflow-y-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4">
+                        <p class="text-xs font-black text-indigo-700">المطلوب من العالم</p>
+                        <p id="adminCustomerBilled" class="text-2xl font-black text-slate-900 mt-1">€0.00</p>
+                        <p class="text-[11px] font-bold text-slate-500 mt-1">إجمالي المطلوب من الزبائن</p>
+                    </div>
+                    <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4">
+                        <p class="text-xs font-black text-amber-700">باقي إلي عند العالم</p>
+                        <p id="adminCustomerRemaining" class="text-2xl font-black text-amber-700 mt-1">€0.00</p>
+                        <p class="text-[11px] font-bold text-slate-500 mt-1">المبالغ التي لم أستلمها بعد</p>
+                    </div>
+                    <div class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4">
+                        <p class="text-xs font-black text-emerald-700">الكاش معي</p>
+                        <p id="adminCashOnHand" class="text-2xl font-black text-emerald-700 mt-1">€0.00</p>
+                        <p class="text-[11px] font-bold text-slate-500 mt-1">المقبوض من الزبائن − المسلّم للموزّع</p>
+                    </div>
+                </div>
+
+                <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 sm:p-5 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h4 class="text-sm sm:text-base font-black text-sky-950">تم تسليمه للموزّع (€)</h4>
+                            <p class="text-xs font-bold text-sky-700 mt-0.5">يمكنك إضافة أي مبلغ باليورو في أي وقت، ويُضاف إلى الإجمالي السابق.</p>
+                        </div>
+                        <div class="bg-white border border-sky-200 rounded-xl px-3 py-2">
+                            <span class="text-[11px] font-bold text-slate-500 block">إجمالي ما تم تسليمه</span>
+                            <span id="adminDistributorPaidTotal" class="text-lg font-black text-sky-800">€0.00</span>
+                        </div>
+                    </div>
+                    <form id="adminDistributorPaymentForm" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+                        <div class="relative">
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-sky-700 font-black">€</span>
+                            <input id="adminDistributorAmount" type="number" step="0.01" min="0.01" required placeholder="مثال: 1000 أو 2000" class="w-full pr-9 pl-3 py-2.5 border-2 border-sky-200 rounded-xl text-sm font-black outline-none focus:border-sky-500 bg-white">
+                        </div>
+                        <input id="adminDistributorDate" type="date" required class="w-full border-2 border-sky-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-sky-500 bg-white">
+                        <button type="submit" class="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-sm font-black shadow-sm">إضافة تسليم</button>
+                    </form>
+                    <div>
+                        <p class="text-xs font-black text-slate-700 mb-2">سجل التسليم للموزّع</p>
+                        <div id="adminDistributorPaymentsList" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -582,9 +646,11 @@
         const PRIVACY_KEY = 'money_transfer_privacy_show_profit';
         const PIN_KEY = 'money_transfer_app_pin';
         const CONTACTS_KEY = 'money_transfer_contacts';
+        const DISTRIBUTOR_PAYMENTS_KEY = 'money_transfer_distributor_payments_v1';
 
         let transactions = [];
         let contacts = [];
+        let distributorPayments = [];
         let undoStack = [];
         let redoStack = [];
         let expandedRows = new Set();
@@ -611,6 +677,7 @@
             // Preview mode opens directly; PIN protection remains in the original file.
             loadPrivacySetting();
             loadContacts();
+            loadDistributorPayments();
             loadFromStorage();
             setupEventListeners();
             render();
@@ -743,6 +810,100 @@
             saveContacts();
         }
 
+
+        function loadDistributorPayments() {
+            const saved = safeStorage.getItem(DISTRIBUTOR_PAYMENTS_KEY);
+            try { distributorPayments = saved ? JSON.parse(saved) : []; }
+            catch (e) { distributorPayments = []; }
+        }
+
+        function saveDistributorPayments() {
+            safeStorage.setItem(DISTRIBUTOR_PAYMENTS_KEY, JSON.stringify(distributorPayments));
+        }
+
+        function getDistributorPaidTotal() {
+            return distributorPayments.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        }
+
+        function renderAdminFinance() {
+            let totalBilled = 0;
+            let totalReceived = 0;
+            let totalRemaining = 0;
+            transactions.forEach(tx => {
+                const totals = calculateTotals(tx);
+                totalBilled += totals.billed;
+                totalReceived += totals.totalPaid;
+                totalRemaining += totals.remaining;
+            });
+            const distributorPaid = getDistributorPaidTotal();
+            const cashOnHand = totalReceived - distributorPaid;
+            const money = value => '€' + Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const byId = id => document.getElementById(id);
+            if (byId('adminCustomerBilled')) byId('adminCustomerBilled').innerText = money(totalBilled);
+            if (byId('adminCustomerRemaining')) byId('adminCustomerRemaining').innerText = money(totalRemaining);
+            if (byId('adminCashOnHand')) {
+                byId('adminCashOnHand').innerText = money(cashOnHand);
+                byId('adminCashOnHand').classList.toggle('text-red-700', cashOnHand < 0);
+                byId('adminCashOnHand').classList.toggle('text-emerald-700', cashOnHand >= 0);
+            }
+            if (byId('adminDistributorPaidTotal')) byId('adminDistributorPaidTotal').innerText = money(distributorPaid);
+
+            const list = byId('adminDistributorPaymentsList');
+            if (list) {
+                if (!distributorPayments.length) {
+                    list.innerHTML = '<p class="text-xs font-bold text-slate-400 italic bg-white border border-sky-100 rounded-xl p-3">لا يوجد تسليم للموزّع مسجل حتى الآن.</p>';
+                } else {
+                    list.innerHTML = distributorPayments
+                        .slice()
+                        .sort((a,b) => new Date(b.date) - new Date(a.date) || (b.createdAt || 0) - (a.createdAt || 0))
+                        .map((item, index) => `
+                            <div class="flex items-center justify-between gap-3 bg-white border-2 border-sky-100 rounded-xl px-3 py-2">
+                                <div>
+                                    <p class="text-xs font-black text-slate-800">€${(Number(item.amount) || 0).toFixed(2)}</p>
+                                    <p class="text-[11px] font-bold text-slate-500">${item.date || 'بدون تاريخ'}</p>
+                                </div>
+                                <button type="button" onclick="deleteDistributorPayment('${item.id}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="حذف التسليم">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>`).join('');
+                }
+            }
+            lucide.createIcons();
+        }
+
+        function addDistributorPayment(e) {
+            e.preventDefault();
+            const amountInput = document.getElementById('adminDistributorAmount');
+            const dateInput = document.getElementById('adminDistributorDate');
+            const amount = Number(amountInput.value) || 0;
+            const date = dateInput.value;
+            if (amount <= 0 || !date) return;
+            distributorPayments.push({ id: 'dist-' + Date.now(), amount, date, createdAt: Date.now() });
+            saveDistributorPayments();
+            amountInput.value = '';
+            renderAdminFinance();
+            renderDashboardKPIs();
+            amountInput.focus();
+        }
+
+        function deleteDistributorPayment(id) {
+            if (!confirm('هل تريد حذف هذا التسليم للموزّع؟')) return;
+            distributorPayments = distributorPayments.filter(item => item.id !== id);
+            saveDistributorPayments();
+            renderAdminFinance();
+            renderDashboardKPIs();
+        }
+
+        function openAdminModal() {
+            document.getElementById('adminDistributorDate').value = new Date().toISOString().split('T')[0];
+            renderAdminFinance();
+            document.getElementById('adminModal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminModal').classList.add('hidden');
+        }
+
         // --- Calculations ---
         function calculateTotals(tx) {
             const totalPaid = (tx.installments || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
@@ -752,7 +913,6 @@
             const profit = billed - cost;
             const isPaid = remaining <= 0.01;
             const paidPercentage = billed > 0 ? Math.min(100, Math.round((totalPaid / billed) * 100)) : 0;
-
             return { billed, cost, totalPaid, remaining, profit, isPaid, paidPercentage };
         }
 
@@ -804,10 +964,11 @@
                 totalProfit += profit;
                 totalPending += remaining;
             });
-
-            document.getElementById('kpiTotalBilled').innerText = '€' + totalBilled.toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('kpiTotalProfit').innerText = '€' + totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('kpiTotalPending').innerText = '€' + totalPending.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            const money = value => '€' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('kpiTotalBilled').innerText = money(totalBilled);
+            document.getElementById('kpiTotalProfit').innerText = money(totalProfit);
+            document.getElementById('kpiTotalPending').innerText = money(totalPending);
+            renderAdminFinance();
         }
 
         function renderViews() {
@@ -946,7 +1107,7 @@
             return `
                 <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3 text-right">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                        <span class="text-xs font-black text-slate-700 uppercase">سجل الدفعات والملاحظات</span>
+                        <span class="text-xs font-black text-slate-700 uppercase">سجل دفعات الزبون والملاحظات</span>
                         ${tx.notes ? `<span class="text-xs font-bold text-slate-600"><strong>الملاحظات:</strong> ${escapeHtml(tx.notes)}</span>` : ''}
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">${installmentsHtml}</div>
@@ -997,6 +1158,7 @@
             } else {
                 addInstallmentInputRow();
             }
+
 
             updateFormCalculations();
             document.getElementById('transactionModal').classList.remove('hidden');
@@ -1055,11 +1217,12 @@
             const notes = document.getElementById('txNotes').value.trim();
 
             const installments = [];
-            document.querySelectorAll('.installment-row').forEach(row => {
+            document.querySelectorAll('#installmentsContainer .installment-row').forEach(row => {
                 const amt = Number(row.querySelector('.inst-amount').value) || 0;
                 const dt = row.querySelector('.inst-date').value;
                 if (amt > 0) installments.push({ amount: amt, date: dt });
             });
+
 
             // Save contact automatically if missing
             if (!contacts.some(c => c.name === clientName)) {
@@ -1137,7 +1300,8 @@
         }
 
         function exportToJson() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
+            const backup = { transactions, distributorPayments };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
             const a = document.createElement('a');
             a.href = dataStr;
             a.download = `نسخة_احتياطية_تحويلات_${new Date().toISOString().split('T')[0]}.json`;
@@ -1153,10 +1317,16 @@
                     const imported = JSON.parse(event.target.result);
                     if (Array.isArray(imported)) {
                         transactions = imported;
-                        saveStateToStorage(true);
-                        render();
-                        alert('تم استيراد النسخة الاحتياطية بنجاح!');
+                    } else if (imported && Array.isArray(imported.transactions)) {
+                        transactions = imported.transactions;
+                        distributorPayments = Array.isArray(imported.distributorPayments) ? imported.distributorPayments : [];
+                        saveDistributorPayments();
+                    } else {
+                        throw new Error('Invalid backup');
                     }
+                    saveStateToStorage(true);
+                    render();
+                    alert('تم استيراد النسخة الاحتياطية بنجاح!');
                 } catch (err) { alert('خطأ في استيراد الملف!'); }
             };
             reader.readAsText(file);
@@ -1174,6 +1344,9 @@
             document.getElementById('closeCalcBtn').onclick = () => document.getElementById('calcModal').classList.add('hidden');
 
             document.getElementById('openContactsBtn').onclick = () => document.getElementById('contactsModal').classList.remove('hidden');
+            document.getElementById('openAdminBtn').onclick = openAdminModal;
+            document.getElementById('closeAdminBtn').onclick = closeAdminModal;
+            document.getElementById('adminDistributorPaymentForm').addEventListener('submit', addDistributorPayment);
             document.getElementById('closeContactsBtn').onclick = () => document.getElementById('contactsModal').classList.add('hidden');
 
             document.getElementById('closeReceiptBtn').onclick = () => document.getElementById('receiptModal').classList.add('hidden');
@@ -1245,6 +1418,8 @@
             document.getElementById('clearDataBtn').onclick = () => {
                 if (confirm('هل ترغب بإعادة التعيين إلى البيانات الافتراضية؟')) {
                     transactions = [...INITIAL_DEMO_DATA];
+                    distributorPayments = [];
+                    saveDistributorPayments();
                     saveStateToStorage(true);
                     render();
                 }
