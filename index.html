@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة وحسابات تحويل الأموال المتكامل</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Arabic Fonts: Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #cbd5e1; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #1e293b; }
+        @media print {
+            body * { visibility: hidden; }
+            #receiptModal, #receiptModal * { visibility: visible; }
+            #receiptModal { position: absolute; left: 0; top: 0; width: 100%; background: white; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="h-full text-slate-900 antialiased bg-slate-100 flex flex-col font-sans">
+
+    <!-- PIN Screen Overlay -->
+    <div id="pinOverlay" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl space-y-6">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
+                <i data-lucide="lock" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-black text-slate-900">حماية دفتر الحسابات</h2>
+                <p class="text-xs font-bold text-slate-500 mt-1">أدخل رمز الـ PIN المكون من 4 أرقام للدخول</p>
+            </div>
+            <input type="password" id="pinInput" maxlength="4" placeholder="••••" class="w-full text-center text-3xl font-black tracking-widest py-3 border-2 border-slate-300 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+            <button id="unlockBtn" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl shadow-md transition">فتح النظام</button>
+            <p id="pinError" class="text-xs font-bold text-red-600 hidden">رمز PIN غير صحيح!</p>
+        </div>
+    </div>
+
+    <!-- Main Application Container -->
+    <div id="appContainer" class="flex-1 flex flex-col h-full hidden">
+        <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-lg border-b border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-20">
+                    
+                    <!-- Brand Title -->
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-emerald-500 text-slate-950 rounded-xl shadow-md font-bold">
+                            <i data-lucide="arrow-right-left" class="w-7 h-7"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-lg sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                                دفتر تحويل الأموال
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">المطور الاحترافي</span>
+                            </h1>
+                            <p class="text-xs sm:text-sm font-semibold text-slate-300 hidden sm:block">متابعة دقيقة للحوالات، الأرباح، والوصلات المباشرة</p>
+                        </div>
+                    </div>
+
+                    <!-- Controls Toolbar -->
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        
+                        <!-- Currency Calc Button -->
+                        <button id="openCalcBtn" title="حاسبة تحويل العملات" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
+                            <i data-lucide="calculator" class="w-4 h-4 text-emerald-400"></i>
+                            <span class="hidden lg:inline">الحاسبة</span>
+                        </button>
+
+                        <!-- Contacts Modal Button -->
+                        <button id="openContactsBtn" title="دليل جهات الاتصال" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
+                            <i data-lucide="users" class="w-4 h-4 text-emerald-400"></i>
+                            <span class="hidden lg:inline">الأسماء</span>
+                        </button>
+
+                        <!-- Privacy Toggle Button -->
+                        <button id="toggleProfitBtn" title="إظهار/إخفاء الأرباح" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
+                            <i id="profitEyeIcon" data-lucide="eye-off" class="w-4 h-4 text-emerald-400"></i>
+                            <span id="profitBtnText" class="hidden md:inline">إخفاء الأرباح</span>
+                        </button>
+
+                        <!-- Undo / Redo controls -->
+                        <div class="flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700 shadow-inner">
+                            <button id="undoBtn" title="تراجع" class="p-2 text-slate-200 hover:text-white hover:bg-slate-700 rounded-lg disabled:opacity-30 transition">
+                                <i data-lucide="undo" class="w-4 h-4"></i>
+                            </button>
+                            <div class="h-4 w-px bg-slate-700 mx-1"></div>
+                            <button id="redoBtn" title="إعادة" class="p-2 text-slate-200 hover:text-white hover:bg-slate-700 rounded-lg disabled:opacity-30 transition">
+                                <i data-lucide="redo" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <!-- New Transaction Button -->
+                        <button id="openNewModalBtn" class="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black shadow-md transition transform active:scale-95">
+                            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                            <span>حوالة جديدة</span>
+                        </button>
+
+                        <!-- Backup / Settings Menu -->
+                        <div class="relative inline-block text-right">
+                            <button id="openBackupMenuBtn" class="p-2.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition">
+                                <i data-lucide="more-vertical" class="w-5 h-5"></i>
+                            </button>
+                            <div id="backupMenu" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 text-slate-800 z-50 text-xs sm:text-sm font-bold">
+                                <button id="setPinBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="key" class="w-4 h-4 text-indigo-600"></i> تغيير رمز PIN للحماية
+                                </button>
+                                <button id="exportCsvFullBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> تصدير أكسل (شامل الأرباح)
+                                </button>
+                                <button id="exportCsvCleanBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="shield-check" class="w-4 h-4 text-slate-600"></i> تصدير أكسل (للزبائن)
+                                </button>
+                                <button id="exportJsonBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="download" class="w-4 h-4 text-slate-600"></i> تصدير نسخة احتياطية (JSON)
+                                </button>
+                                <label class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer">
+                                    <i data-lucide="upload" class="w-4 h-4 text-slate-600"></i> استيراد نسخة احتياطية
+                                    <input type="file" id="importFileInput" accept=".json" class="hidden">
+                                </label>
+                                <hr class="my-1.5 border-slate-200">
+                                <button id="clearDataBtn" class="w-full text-right px-4 py-2.5 text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <i data-lucide="rotate-ccw" class="w-4 h-4 text-red-500"></i> استعادة البيانات الافتراضية
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+
+            <!-- Dynamic KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">إجمالي المبالغ المسلّمة</p>
+                        <h2 id="kpiTotalDelivered" class="text-xl sm:text-2xl font-black text-slate-900 mt-1">مُتعدد العملات</h2>
+                        <p class="text-xs font-semibold text-slate-500 mt-0.5">المبالغ المحوّلة للزبائن</p>
+                    </div>
+                    <div class="p-3.5 bg-blue-100 text-blue-700 rounded-2xl font-black">
+                        <i data-lucide="hand-coins" class="w-7 h-7"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">المطلوب من الزبائن (€)</p>
+                        <h2 id="kpiTotalBilled" class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">€0.00</h2>
+                        <p class="text-xs font-semibold text-slate-500 mt-0.5">القيمة الكلية لسعر الحوالات</p>
+                    </div>
+                    <div class="p-3.5 bg-indigo-100 text-indigo-700 rounded-2xl font-black">
+                        <i data-lucide="receipt" class="w-7 h-7"></i>
+                    </div>
+                </div>
+
+                <div id="kpiProfitCard" class="bg-white p-5 rounded-2xl border-2 border-emerald-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-emerald-800">صافي الأرباح (€)</p>
+                        <h2 id="kpiTotalProfit" class="text-2xl sm:text-3xl font-black text-emerald-700 mt-1">€0.00</h2>
+                        <p class="text-xs font-semibold text-slate-500 mt-0.5">فرق السعر عن التكلفة</p>
+                    </div>
+                    <div class="p-3.5 bg-emerald-100 text-emerald-700 rounded-2xl font-black">
+                        <i data-lucide="trending-up" class="w-7 h-7"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border-2 border-amber-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-amber-800">المتبقي لدى الزبائن (€)</p>
+                        <h2 id="kpiTotalPending" class="text-2xl sm:text-3xl font-black text-amber-600 mt-1">€0.00</h2>
+                        <p class="text-xs font-semibold text-slate-500 mt-0.5">المبالغ غير المقبوضة</p>
+                    </div>
+                    <div class="p-3.5 bg-amber-100 text-amber-700 rounded-2xl font-black">
+                        <i data-lucide="clock" class="w-7 h-7"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="w-5 h-5 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchInput" placeholder="بحث باسم الزبون، الوسيط، الملاحظات..." class="w-full pr-11 pl-4 py-3 border-2 border-slate-300 rounded-xl text-xs sm:text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                </div>
+
+                <div class="flex items-center gap-3 overflow-x-auto pb-1 md:pb-0">
+                    <select id="statusFilter" class="border-2 border-slate-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-bold bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="ALL">جميع الحالات</option>
+                        <option value="PENDING">متبقي (غير مكتمل)</option>
+                        <option value="PAID">مكتمل بالكامل</option>
+                    </select>
+
+                    <select id="sortBySelect" class="border-2 border-slate-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-bold bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="DATE_DESC">الأحدث أولاً</option>
+                        <option value="DATE_ASC">الأقدم أولاً</option>
+                        <option value="NAME_ASC">اسم الزبون (أ - ي)</option>
+                        <option value="BALANCE_DESC">أعلى مبلغ متبقي</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Transactions Ledger View -->
+            <div class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
+                <div class="hidden md:block overflow-x-auto flex-1">
+                    <table class="w-full text-right text-sm border-collapse">
+                        <thead class="bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider sticky top-0 z-10">
+                            <tr>
+                                <th class="py-4 px-3 w-10 text-center">تفاصيل</th>
+                                <th class="py-4 px-3">التاريخ</th>
+                                <th class="py-4 px-4">اسم الزبون</th>
+                                <th class="py-4 px-4 text-left">المبلغ المسلّم</th>
+                                <th class="py-4 px-4 text-left">التكلفة (€)</th>
+                                <th class="py-4 px-4 text-left">سعر الحوالة (€)</th>
+                                <th id="thProfitHeader" class="py-4 px-4 text-left">الربح (€)</th>
+                                <th class="py-4 px-4 text-left">المدفوع (€)</th>
+                                <th class="py-4 px-4 text-left">المتبقي (€)</th>
+                                <th class="py-4 px-4 text-center">الحالة</th>
+                                <th class="py-4 px-4 text-left">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="desktopTableBody" class="divide-y-2 divide-slate-100 text-slate-800 font-bold"></tbody>
+                    </table>
+                </div>
+
+                <div id="mobileCardsContainer" class="block md:hidden p-4 space-y-4"></div>
+
+                <div id="emptyState" class="hidden py-16 text-center">
+                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="file-x" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-800">لا توجد معاملات مطابقة</h3>
+                    <p class="text-xs text-slate-500 font-semibold mt-1">قم بإضافة معاملة تحويل جديدة أو غيّرحقول البحث.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Transaction Form Modal -->
+    <div id="transactionModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-slate-200 overflow-hidden my-auto max-h-[95vh] flex flex-col">
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+                <div>
+                    <h3 id="modalTitle" class="text-base sm:text-xl font-black">إضافة معاملة تحويل جديدة</h3>
+                    <p class="text-xs text-slate-300 font-medium">تسليم الزبون والدفعات المقبوضة باليورو</p>
+                </div>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <form id="transactionForm" class="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 text-right">
+                <input type="hidden" id="editTxId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black text-slate-700 uppercase mb-1">التاريخ *</label>
+                        <input type="date" id="txDate" required class="w-full border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-700 uppercase mb-1">اسم الزبون *</label>
+                        <input type="text" id="txClient" list="contactsDatalist" required placeholder="اختيار أو كتابة اسم الزبون..." class="w-full border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <datalist id="contactsDatalist"></datalist>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3">
+                    <label class="block text-xs font-black text-slate-800 uppercase">المبلغ المسلّم للزبون وعملة الاستلام *</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="sm:col-span-2 relative">
+                            <input type="number" step="0.01" min="0" id="txDeliveredAmount" required placeholder="1000.00" class="w-full pl-3 pr-4 py-2.5 border-2 border-slate-300 rounded-xl text-sm font-black focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                        </div>
+                        <div>
+                            <select id="txCurrency" class="w-full border-2 border-slate-300 rounded-xl px-3 py-2.5 text-sm font-black bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="USD">$ USD - دولار أمريكي</option>
+                                <option value="SYP">SYP - ليرة سورية</option>
+                                <option value="EUR">€ EUR - يورو</option>
+                                <option value="CUSTOM">عملة أخرى...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="customCurrencyBox" class="hidden mt-2">
+                        <input type="text" id="txCustomCurrency" placeholder="اكتب رمز العملة" class="w-full border-2 border-slate-300 rounded-xl px-3.5 py-2 text-xs font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="bg-slate-100 p-4 rounded-2xl border-2 border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black text-slate-700 uppercase mb-1">التكلفة علينا (€ EUR) *</label>
+                        <div class="relative">
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-extrabold text-sm">€</span>
+                            <input type="number" step="0.01" min="0" id="txPartnerCostEur" required placeholder="900.00" class="w-full pr-8 pl-3 py-2.5 border-2 border-slate-300 rounded-xl text-sm font-black focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-700 uppercase mb-1">سعر الحوالة للزبون (€)</label>
+                        <div class="relative">
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-extrabold text-sm">€</span>
+                            <input type="number" step="0.01" min="0" id="txBilledEur" placeholder="920.00" class="w-full pr-8 pl-3 py-2.5 border-2 border-slate-300 rounded-xl text-sm font-black focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs sm:text-sm font-black bg-emerald-100 text-emerald-950 border-2 border-emerald-300 rounded-xl px-4 py-3">
+                    <span id="modalProfitPreviewSpan">الأرباح المتوقعة: <strong id="formProfitPreview" class="text-emerald-700 text-base">€0.00</strong></span>
+                    <span>المتبقي: <strong id="formRemainingPreview" class="text-amber-700 text-base">€0.00</strong></span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div>
+					<label class="block text-xs font-black text-slate-700 uppercase mb-1">اسم الوسيط / الشريك</label>
+					<input type="text" id="txPartner" value="أسامة" placeholder="أدخل اسم الوسيط..." class="w-full border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+				</div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-700 uppercase mb-1">ملاحظات / جهة التسليم</label>
+                        <input type="text" id="txNotes" placeholder="مكان التسليم أو معلومات إضافية" class="w-full border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-black text-slate-700 uppercase">سجل الدفعات المقبوضة (€)</label>
+                        <button type="button" id="addInstallmentBtn" class="text-xs font-black text-emerald-700 flex items-center gap-1 bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-300">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> إضافة دفعة
+                        </button>
+                    </div>
+                    <div id="installmentsContainer" class="space-y-2"></div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t-2 border-slate-100 shrink-0">
+                    <button type="button" id="cancelModalBtn" class="px-5 py-2.5 text-sm font-extrabold text-slate-600 hover:bg-slate-100 rounded-xl transition">إلغاء</button>
+                    <button type="submit" class="px-6 py-2.5 text-sm font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl shadow-md transition">حفظ المعاملة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Receipt Generator Modal -->
+    <div id="receiptModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border-2 border-slate-200 overflow-hidden my-auto p-6 space-y-6 text-right">
+            <div class="text-center border-b pb-4 border-slate-200">
+                <div class="w-12 h-12 bg-emerald-500 text-slate-950 rounded-2xl flex items-center justify-center mx-auto mb-2 font-black">
+                    <i data-lucide="receipt" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-900">إيصال استلام حوالة</h3>
+                <p class="text-xs text-slate-500 font-bold">دفتر الحسابات والتحويلات الماليّة</p>
+            </div>
+
+            <div id="receiptContent" class="space-y-3 text-sm font-bold text-slate-800">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="flex items-center gap-2 pt-4 border-t border-slate-200 no-print">
+                <button id="whatsappBtn" class="flex-1 py-2.5 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl flex items-center justify-center gap-2 text-xs">
+                    <i data-lucide="message-square" class="w-4 h-4"></i> إرسال واتساب
+                </button>
+                <button onclick="window.print()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-xl text-xs flex items-center gap-1">
+                    <i data-lucide="printer" class="w-4 h-4"></i> طباعة
+                </button>
+                <button id="closeReceiptBtn" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-black rounded-xl text-xs">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exchange Calculator Modal -->
+    <div id="calcModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl border-2 border-slate-200 p-6 space-y-4 text-right">
+            <div class="flex justify-between items-center border-b pb-3 border-slate-200">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                    <i data-lucide="calculator" class="w-5 h-5 text-emerald-600"></i> حاسبة أسعار الصرف
+                </h3>
+                <button id="closeCalcBtn" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-black text-slate-700 mb-1">المبلغ المراد تحويله</label>
+                    <input type="number" id="calcAmount" placeholder="1000" class="w-full border-2 border-slate-300 rounded-xl p-2 text-sm font-bold outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-slate-700 mb-1">سعر الصرف (سعر التكلفة لكل 1 يورو)</label>
+                    <input type="number" id="calcRate" placeholder="1.08" class="w-full border-2 border-slate-300 rounded-xl p-2 text-sm font-bold outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-slate-700 mb-1">نسبة الربح / العمولة المضافة (%)</label>
+                    <input type="number" id="calcMargin" placeholder="2.5" class="w-full border-2 border-slate-300 rounded-xl p-2 text-sm font-bold outline-none focus:border-emerald-500">
+                </div>
+                <div class="bg-slate-100 p-3 rounded-xl border border-slate-200 space-y-1 text-xs font-black">
+                    <div class="flex justify-between text-slate-600"><span>التكلفة الصافية (€):</span><span id="calcResultCost">€0.00</span></div>
+                    <div class="flex justify-between text-emerald-700"><span>المطلوب مع الأرباح (€):</span><span id="calcResultBilled">€0.00</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contacts Management Modal -->
+    <div id="contactsModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border-2 border-slate-200 p-6 space-y-4 text-right max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-3 border-slate-200">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                    <i data-lucide="users" class="w-5 h-5 text-emerald-600"></i> دليل الأسماء والجهات
+                </h3>
+                <button id="closeContactsBtn" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <form id="addContactForm" class="flex gap-2">
+                <input type="text" id="contactNameInput" placeholder="اسم زبون جديد..." required class="flex-1 border-2 border-slate-300 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-emerald-500">
+                <input type="text" id="contactPhoneInput" placeholder="رقم الهاتف (اختياري)" class="w-32 border-2 border-slate-300 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-emerald-500">
+                <button type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3 py-2 rounded-xl text-xs">إضافة</button>
+            </form>
+
+            <div id="contactsList" class="overflow-y-auto flex-1 space-y-2 border-t border-slate-100 pt-3"></div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'money_transfer_ledger_v4';
+        const PRIVACY_KEY = 'money_transfer_privacy_show_profit';
+        const PIN_KEY = 'money_transfer_app_pin';
+        const CONTACTS_KEY = 'money_transfer_contacts';
+
+        let transactions = [];
+        let contacts = [];
+        let undoStack = [];
+        let redoStack = [];
+        let expandedRows = new Set();
+        let showProfit = true;
+        let activePin = localStorage.getItem(PIN_KEY) || "1234";
+
+        const INITIAL_DEMO_DATA = [
+            {
+                id: 'tx-1',
+                date: '2026-09-20',
+                clientName: 'حسن الجاهوش',
+                deliveredAmount: 1000,
+                currency: 'USD',
+                partnerCostEur: 900,
+                billedEur: 920,
+                partnerName: 'أسامة',
+                notes: 'تسليم دولار - استلام دفعة أولى 500 يورو.',
+                installments: [{ amount: 500, date: '2026-09-20' }]
+            }
+        ];
+
+        window.onload = function() {
+            lucide.createIcons();
+            setupPinAuth();
+            loadPrivacySetting();
+            loadContacts();
+            loadFromStorage();
+            setupEventListeners();
+            render();
+        };
+
+        // --- Auth & PIN Engine ---
+        function setupPinAuth() {
+            const overlay = document.getElementById('pinOverlay');
+            const app = document.getElementById('appContainer');
+            const unlockBtn = document.getElementById('unlockBtn');
+            const pinInput = document.getElementById('pinInput');
+            const pinError = document.getElementById('pinError');
+
+            unlockBtn.onclick = () => {
+                if (pinInput.value === activePin) {
+                    overlay.classList.add('hidden');
+                    app.classList.remove('hidden');
+                } else {
+                    pinError.classList.remove('hidden');
+                }
+            };
+        }
+
+        // --- Privacy & Data Management ---
+        function loadPrivacySetting() {
+            const saved = localStorage.getItem(PRIVACY_KEY);
+            showProfit = saved !== null ? saved === 'true' : true;
+            updatePrivacyUI();
+        }
+
+        function toggleProfitVisibility() {
+            showProfit = !showProfit;
+            localStorage.setItem(PRIVACY_KEY, showProfit);
+            updatePrivacyUI();
+            render();
+        }
+
+        function updatePrivacyUI() {
+            const eyeIcon = document.getElementById('profitEyeIcon');
+            const btnText = document.getElementById('profitBtnText');
+            const kpiProfitCard = document.getElementById('kpiProfitCard');
+            const thProfitHeader = document.getElementById('thProfitHeader');
+            const modalProfitPreviewSpan = document.getElementById('modalProfitPreviewSpan');
+
+            if (eyeIcon) eyeIcon.setAttribute('data-lucide', showProfit ? 'eye-off' : 'eye');
+            if (btnText) btnText.innerText = showProfit ? 'إخفاء الأرباح' : 'إظهار الأرباح';
+            if (kpiProfitCard) kpiProfitCard.classList.toggle('hidden', !showProfit);
+            if (thProfitHeader) thProfitHeader.classList.toggle('hidden', !showProfit);
+            if (modalProfitPreviewSpan) modalProfitPreviewSpan.classList.toggle('hidden', !showProfit);
+            lucide.createIcons();
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            try { transactions = saved ? JSON.parse(saved) : [...INITIAL_DEMO_DATA]; }
+            catch (e) { transactions = [...INITIAL_DEMO_DATA]; }
+        }
+
+        function saveStateToStorage(pushToUndo = true) {
+            if (pushToUndo) {
+                undoStack.push(JSON.stringify(transactions));
+                redoStack = [];
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            updateUndoRedoButtons();
+        }
+
+        function undo() {
+            if (!undoStack.length) return;
+            redoStack.push(JSON.stringify(transactions));
+            transactions = JSON.parse(undoStack.pop());
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            updateUndoRedoButtons();
+            render();
+        }
+
+        function redo() {
+            if (!redoStack.length) return;
+            undoStack.push(JSON.stringify(transactions));
+            transactions = JSON.parse(redoStack.pop());
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            updateUndoRedoButtons();
+            render();
+        }
+
+        function updateUndoRedoButtons() {
+            document.getElementById('undoBtn').disabled = !undoStack.length;
+            document.getElementById('redoBtn').disabled = !redoStack.length;
+        }
+
+        // --- Contacts Management ---
+        function loadContacts() {
+            const saved = localStorage.getItem(CONTACTS_KEY);
+            contacts = saved ? JSON.parse(saved) : [{ name: 'حسن الجاهوش', phone: '003579000000' }];
+            renderContacts();
+        }
+
+        function saveContacts() {
+            localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+            renderContacts();
+        }
+
+        function renderContacts() {
+            const datalist = document.getElementById('contactsDatalist');
+            const list = document.getElementById('contactsList');
+            datalist.innerHTML = '';
+            list.innerHTML = '';
+
+            contacts.forEach((c, idx) => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                datalist.appendChild(opt);
+
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold';
+                item.innerHTML = `
+                    <div>
+                        <span class="text-slate-900 block">${escapeHtml(c.name)}</span>
+                        <span class="text-slate-500 font-normal">${escapeHtml(c.phone || 'بدون رقم')}</span>
+                    </div>
+                    <button onclick="removeContact(${idx})" class="p-1 text-red-500 hover:bg-red-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                `;
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function removeContact(idx) {
+            contacts.splice(idx, 1);
+            saveContacts();
+        }
+
+        // --- Calculations ---
+        function calculateTotals(tx) {
+            const totalPaid = (tx.installments || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+            const cost = Number(tx.partnerCostEur) || 0;
+            const billed = (tx.billedEur !== undefined && tx.billedEur !== null && tx.billedEur !== '' && Number(tx.billedEur) > 0) ? Number(tx.billedEur) : cost;
+            const remaining = Math.max(0, billed - totalPaid);
+            const profit = billed - cost;
+            const isPaid = remaining <= 0.01;
+            const paidPercentage = billed > 0 ? Math.min(100, Math.round((totalPaid / billed) * 100)) : 0;
+
+            return { billed, cost, totalPaid, remaining, profit, isPaid, paidPercentage };
+        }
+
+        function formatCurrencySymbol(curr) {
+            if (curr === 'USD') return '$';
+            if (curr === 'EUR') return '€';
+            if (curr === 'SYP') return 'ل.س';
+            return curr || '';
+        }
+
+        function getFilteredTransactions() {
+            const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const sortBy = document.getElementById('sortBySelect').value;
+
+            return transactions.filter(tx => {
+                const { isPaid } = calculateTotals(tx);
+                if (statusFilter === 'PAID' && !isPaid) return false;
+                if (statusFilter === 'PENDING' && isPaid) return false;
+
+                if (search) {
+                    const client = (tx.clientName || '').toLowerCase();
+                    const partner = (tx.partnerName || '').toLowerCase();
+                    const notes = (tx.notes || '').toLowerCase();
+                    if (!client.includes(search) && !partner.includes(search) && !notes.includes(search)) return false;
+                }
+                return true;
+            }).sort((a, b) => {
+                if (sortBy === 'DATE_DESC') return new Date(b.date) - new Date(a.date);
+                if (sortBy === 'DATE_ASC') return new Date(a.date) - new Date(b.date);
+                if (sortBy === 'NAME_ASC') return a.clientName.localeCompare(b.clientName, 'ar');
+                if (sortBy === 'BALANCE_DESC') return calculateTotals(b).remaining - calculateTotals(a).remaining;
+                return 0;
+            });
+        }
+
+        // --- Render UI ---
+        function render() {
+            renderDashboardKPIs();
+            renderViews();
+            lucide.createIcons();
+        }
+
+        function renderDashboardKPIs() {
+            let totalBilled = 0, totalProfit = 0, totalPending = 0;
+            transactions.forEach(tx => {
+                const { billed, remaining, profit } = calculateTotals(tx);
+                totalBilled += billed;
+                totalProfit += profit;
+                totalPending += remaining;
+            });
+
+            document.getElementById('kpiTotalBilled').innerText = '€' + totalBilled.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('kpiTotalProfit').innerText = '€' + totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('kpiTotalPending').innerText = '€' + totalPending.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        }
+
+        function renderViews() {
+            const list = getFilteredTransactions();
+            const tbody = document.getElementById('desktopTableBody');
+            const mobileContainer = document.getElementById('mobileCardsContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            tbody.innerHTML = '';
+            mobileContainer.innerHTML = '';
+
+            if (!list.length) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            list.forEach(tx => {
+                const { billed, cost, totalPaid, remaining, profit, isPaid, paidPercentage } = calculateTotals(tx);
+                const isExpanded = expandedRows.has(tx.id);
+                const currSymbol = formatCurrencySymbol(tx.currency);
+
+                // Desktop Row
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition border-b border-slate-200 text-sm font-bold';
+                tr.innerHTML = `
+                    <td class="py-4 px-3 text-center">
+                        <button onclick="toggleExpandRow('${tx.id}')" class="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition">
+                            <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-left'}" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                    <td class="py-4 px-3 text-xs font-extrabold text-slate-500">${tx.date}</td>
+                    <td class="py-4 px-4 font-black text-slate-900 text-base">
+                        <div>${escapeHtml(tx.clientName)}</div>
+                        ${tx.partnerName ? `<span class="text-xs text-slate-500 font-bold">الوسيط: ${escapeHtml(tx.partnerName)}</span>` : ''}
+                    </td>
+                    <td class="py-4 px-4 text-left font-black text-slate-900 text-base">
+                        ${(Number(tx.deliveredAmount) || 0).toLocaleString('en-US')} ${currSymbol}
+                    </td>
+                    <td class="py-4 px-4 text-left text-slate-600 font-bold">€${cost.toFixed(2)}</td>
+                    <td class="py-4 px-4 text-left font-black text-slate-900 text-base">€${billed.toFixed(2)}</td>
+                    ${showProfit ? `<td class="py-4 px-4 text-left font-black text-base ${profit > 0 ? 'text-emerald-700' : 'text-slate-500'}">€${profit.toFixed(2)}</td>` : ''}
+                    <td class="py-4 px-4 text-left text-slate-800">€${totalPaid.toFixed(2)}</td>
+                    <td class="py-4 px-4 text-left font-extrabold text-base ${remaining > 0 ? 'text-amber-600' : 'text-slate-400'}">€${remaining.toFixed(2)}</td>
+                    <td class="py-4 px-4 text-center">
+                        ${isPaid 
+                            ? `<span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">مكتمل</span>`
+                            : `<span class="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">متبقي €${remaining.toFixed(2)}</span>`
+                        }
+                    </td>
+                    <td class="py-4 px-4 text-left">
+                        <div class="flex items-center gap-1">
+                            <button onclick="openReceiptModal('${tx.id}')" class="p-2 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition" title="إصدار فاتورة/إيصال">
+                                <i data-lucide="receipt" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="openEditModal('${tx.id}')" class="p-2 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition" title="تعديل">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteTransaction('${tx.id}')" class="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="حذف">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                if (isExpanded) {
+                    const expandedTr = document.createElement('tr');
+                    expandedTr.className = 'bg-slate-100/80 border-b-2 border-slate-200';
+                    expandedTr.innerHTML = `<td colspan="${showProfit ? 11 : 10}" class="py-4 px-6">${renderInstallmentsDetailHtml(tx)}</td>`;
+                    tbody.appendChild(expandedTr);
+                }
+
+                // Mobile Card
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl border-2 border-slate-200 p-4 shadow-xs space-y-3';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div>
+                            <h4 class="text-base font-black text-slate-900">${escapeHtml(tx.clientName)}</h4>
+                            <p class="text-xs font-bold text-slate-500">${tx.date} ${tx.partnerName ? `• الوسيط: ${escapeHtml(tx.partnerName)}` : ''}</p>
+                        </div>
+                        <div>
+                            ${isPaid 
+                                ? `<span class="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">مكتمل</span>`
+                                : `<span class="px-2.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">متبقي €${remaining.toFixed(2)}</span>`
+                            }
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs font-extrabold bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div>
+                            <span class="text-slate-500 block">المسلم للزبون:</span>
+                            <span class="text-slate-900 text-sm font-black">${(Number(tx.deliveredAmount) || 0).toLocaleString('en-US')} ${currSymbol}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">سعر الحوالة (€):</span>
+                            <span class="text-slate-900 text-sm font-black">€${billed.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1">
+                        <button onclick="toggleExpandRow('${tx.id}')" class="text-xs font-black text-slate-700 flex items-center gap-1 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                            <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4"></i>
+                            ${isExpanded ? 'إخفاء' : 'عرض التفاصيل'}
+                        </button>
+                        <div class="flex items-center gap-1">
+                            <button onclick="openReceiptModal('${tx.id}')" class="p-2 text-slate-700 bg-slate-100 hover:bg-blue-100 rounded-lg transition">
+                                <i data-lucide="receipt" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="openEditModal('${tx.id}')" class="p-2 text-slate-700 bg-slate-100 hover:bg-emerald-100 rounded-lg transition">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteTransaction('${tx.id}')" class="p-2 text-slate-700 bg-slate-100 hover:bg-red-100 rounded-lg transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ${isExpanded ? `<div class="mt-2">${renderInstallmentsDetailHtml(tx)}</div>` : ''}
+                `;
+                mobileContainer.appendChild(card);
+            });
+        }
+
+        function renderInstallmentsDetailHtml(tx) {
+            const installmentsHtml = (tx.installments && tx.installments.length > 0)
+                ? tx.installments.map((inst, index) => `
+                    <div class="flex items-center justify-between text-xs font-extrabold py-2 px-3 bg-white border-2 border-slate-200 rounded-xl">
+                        <span class="text-slate-600">الدفعة #${index + 1} (${inst.date || 'بدون تاريخ'})</span>
+                        <span class="text-slate-900 font-black text-sm">€${(Number(inst.amount) || 0).toFixed(2)}</span>
+                    </div>
+                  `).join('')
+                : `<p class="text-xs font-bold text-slate-400 italic">لا توجد دفعات مسجلة.</p>`;
+
+            return `
+                <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3 text-right">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                        <span class="text-xs font-black text-slate-700 uppercase">سجل الدفعات والملاحظات</span>
+                        ${tx.notes ? `<span class="text-xs font-bold text-slate-600"><strong>الملاحظات:</strong> ${escapeHtml(tx.notes)}</span>` : ''}
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">${installmentsHtml}</div>
+                </div>
+            `;
+        }
+
+        function toggleExpandRow(id) {
+            expandedRows.has(id) ? expandedRows.delete(id) : expandedRows.add(id);
+            render();
+        }
+
+        // --- Modals & Form Actions ---
+        function openNewModal() {
+            document.getElementById('modalTitle').innerText = 'إضافة معاملة تحويل جديدة';
+            document.getElementById('editTxId').value = '';
+            document.getElementById('transactionForm').reset();
+            document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('installmentsContainer').innerHTML = '';
+            addInstallmentInputRow();
+            updateFormCalculations();
+            document.getElementById('transactionModal').classList.remove('hidden');
+        }
+
+        function openEditModal(id) {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx) return;
+
+            document.getElementById('modalTitle').innerText = 'تعديل بيانات المعاملة';
+            document.getElementById('editTxId').value = tx.id;
+            document.getElementById('txDate').value = tx.date;
+            document.getElementById('txClient').value = tx.clientName;
+            document.getElementById('txDeliveredAmount').value = tx.deliveredAmount;
+            document.getElementById('txCurrency').value = ['USD','SYP','EUR'].includes(tx.currency) ? tx.currency : 'CUSTOM';
+            if (document.getElementById('txCurrency').value === 'CUSTOM') {
+                document.getElementById('customCurrencyBox').classList.remove('hidden');
+                document.getElementById('txCustomCurrency').value = tx.currency;
+            }
+            document.getElementById('txPartnerCostEur').value = tx.partnerCostEur;
+            document.getElementById('txBilledEur').value = tx.billedEur !== undefined ? tx.billedEur : '';
+            document.getElementById('txPartner').value = tx.partnerName || '';
+            document.getElementById('txNotes').value = tx.notes || '';
+
+            const container = document.getElementById('installmentsContainer');
+            container.innerHTML = '';
+            if (tx.installments && tx.installments.length) {
+                tx.installments.forEach(inst => addInstallmentInputRow(inst.amount, inst.date));
+            } else {
+                addInstallmentInputRow();
+            }
+
+            updateFormCalculations();
+            document.getElementById('transactionModal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('transactionModal').classList.add('hidden'); }
+
+        function addInstallmentInputRow(amount = '', date = '') {
+            const container = document.getElementById('installmentsContainer');
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 installment-row';
+            row.innerHTML = `
+                <div class="relative flex-1">
+                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">€</span>
+                    <input type="number" step="0.01" min="0" placeholder="الدفعة (€)" value="${amount}" oninput="updateFormCalculations()" class="inst-amount w-full pr-8 pl-3 py-2 border-2 border-slate-300 rounded-xl text-xs font-black outline-none focus:border-emerald-500">
+                </div>
+                <input type="date" value="${date || new Date().toISOString().split('T')[0]}" class="inst-date border-2 border-slate-300 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-emerald-500">
+                <button type="button" onclick="removeInstallmentRow(this)" class="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            `;
+            container.appendChild(row);
+            lucide.createIcons();
+            updateFormCalculations();
+        }
+
+        function removeInstallmentRow(btn) {
+            btn.closest('.installment-row').remove();
+            updateFormCalculations();
+        }
+
+        function updateFormCalculations() {
+            const cost = Number(document.getElementById('txPartnerCostEur').value) || 0;
+            const billedRaw = document.getElementById('txBilledEur').value;
+            const billed = (billedRaw !== '' && billedRaw !== null) ? Number(billedRaw) : cost;
+
+            let totalPaid = 0;
+            document.querySelectorAll('.inst-amount').forEach(input => { totalPaid += Number(input.value) || 0; });
+
+            document.getElementById('formProfitPreview').innerText = '€' + (billed - cost).toFixed(2);
+            document.getElementById('formRemainingPreview').innerText = '€' + Math.max(0, billed - totalPaid).toFixed(2);
+        }
+
+        function saveTransaction(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editTxId').value;
+            const date = document.getElementById('txDate').value;
+            const clientName = document.getElementById('txClient').value.trim();
+            const deliveredAmount = Number(document.getElementById('txDeliveredAmount').value) || 0;
+
+            let currency = document.getElementById('txCurrency').value;
+            if (currency === 'CUSTOM') currency = document.getElementById('txCustomCurrency').value.trim() || 'MEMBER';
+
+            const partnerCostEur = Number(document.getElementById('txPartnerCostEur').value) || 0;
+            const billedEurRaw = document.getElementById('txBilledEur').value;
+            const billedEur = (billedEurRaw !== '' && billedEurRaw !== null) ? Number(billedEurRaw) : partnerCostEur;
+            const partnerName = document.getElementById('txPartner').value.trim();
+            const notes = document.getElementById('txNotes').value.trim();
+
+            const installments = [];
+            document.querySelectorAll('.installment-row').forEach(row => {
+                const amt = Number(row.querySelector('.inst-amount').value) || 0;
+                const dt = row.querySelector('.inst-date').value;
+                if (amt > 0) installments.push({ amount: amt, date: dt });
+            });
+
+            // Save contact automatically if missing
+            if (!contacts.some(c => c.name === clientName)) {
+                contacts.push({ name: clientName });
+                saveContacts();
+            }
+
+            if (editId) {
+                const index = transactions.findIndex(t => t.id === editId);
+                if (index !== -1) transactions[index] = { ...transactions[index], date, clientName, deliveredAmount, currency, partnerCostEur, billedEur, partnerName, notes, installments };
+            } else {
+                transactions.unshift({ id: 'tx-' + Date.now(), date, clientName, deliveredAmount, currency, partnerCostEur, billedEur, partnerName, notes, installments });
+            }
+
+            saveStateToStorage(true);
+            closeModal();
+            render();
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('هل أنت تأكد من رغبتك في حذف المعاملة؟')) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveStateToStorage(true);
+                render();
+            }
+        }
+
+        // --- Receipt Generator ---
+        function openReceiptModal(id) {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx) return;
+
+            const { billed, totalPaid, remaining, isPaid } = calculateTotals(tx);
+            const currSymbol = formatCurrencySymbol(tx.currency);
+
+            const content = document.getElementById('receiptContent');
+            content.innerHTML = `
+                <div class="flex justify-between border-b pb-2 border-slate-100"><span>التاريخ:</span><span>${tx.date}</span></div>
+                <div class="flex justify-between border-b pb-2 border-slate-100"><span>اسم الزبون:</span><span class="font-black text-slate-900">${escapeHtml(tx.clientName)}</span></div>
+                <div class="flex justify-between border-b pb-2 border-slate-100"><span>المبلغ المسلّم:</span><span class="font-black text-emerald-700">${(Number(tx.deliveredAmount) || 0).toLocaleString()} ${currSymbol}</span></div>
+                <div class="flex justify-between border-b pb-2 border-slate-100"><span>سعر الحوالة (€):</span><span>€${billed.toFixed(2)}</span></div>
+                <div class="flex justify-between border-b pb-2 border-slate-100"><span>المبلغ المقبوض (€):</span><span>€${totalPaid.toFixed(2)}</span></div>
+                <div class="flex justify-between text-base font-black pt-1"><span>المتبقي (€):</span><span class="${remaining > 0 ? 'text-amber-600' : 'text-emerald-600'}">€${remaining.toFixed(2)}</span></div>
+            `;
+
+            const whatsappMessage = `مرحباً ${tx.clientName}،%0Aإليك تفاصيل الحوالة الخاصّة بك:%0A- المبلغ المسلّم: ${tx.deliveredAmount} ${currSymbol}%0A- المطلوب باليورو: €${billed.toFixed(2)}%0A- المدفوع: €${totalPaid.toFixed(2)}%0A- المتبقي: €${remaining.toFixed(2)}%0Aشكراً لتعاملك معنا!`;
+            
+            const contact = contacts.find(c => c.name === tx.clientName);
+            const phone = contact && contact.phone ? contact.phone.replace(/[^0-9]/g, '') : '';
+            
+            document.getElementById('whatsappBtn').onclick = () => {
+                window.open(`https://wa.me/${phone}?text=${whatsappMessage}`, '_blank');
+            };
+
+            document.getElementById('receiptModal').classList.remove('hidden');
+        }
+
+        // --- Export / Import ---
+        function exportToCsv(includeProfit = true) {
+            let csv = "\uFEFF";
+            csv += includeProfit ? "المعرف,التاريخ,اسم الزبون,المبلغ المسلم,العملة,التكلفة علينا €,سعر الحوالة €,الربح €,المدفوع €,المتبقي €,الحالة,الوسيط,ملاحظات\n" : "المعرف,التاريخ,اسم الزبون,المبلغ المسلم,العملة,سعر الحوالة €,المدفوع €,المتبقي €,الحالة,الوسيط,ملاحظات\n";
+
+            transactions.forEach(tx => {
+                const { billed, cost, totalPaid, remaining, profit, isPaid } = calculateTotals(tx);
+                const row = includeProfit 
+                    ? [`"${tx.id}"`, `"${tx.date}"`, `"${tx.clientName}"`, tx.deliveredAmount, `"${tx.currency}"`, cost.toFixed(2), billed.toFixed(2), profit.toFixed(2), totalPaid.toFixed(2), remaining.toFixed(2), isPaid ? "مكتمل" : "غير مكتمل", `"${tx.partnerName||''}"`, `"${tx.notes||''}"`]
+                    : [`"${tx.id}"`, `"${tx.date}"`, `"${tx.clientName}"`, tx.deliveredAmount, `"${tx.currency}"`, billed.toFixed(2), totalPaid.toFixed(2), remaining.toFixed(2), isPaid ? "مكتمل" : "غير مكتمل", `"${tx.partnerName||''}"`, `"${tx.notes||''}"`];
+                csv += row.join(",") + "\n";
+            });
+
+            const link = document.createElement("a");
+            link.href = encodeURI("data:text/csv;charset=utf-8," + csv);
+            link.download = `سجل_التحويلات_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        function exportToJson() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = `نسخة_احتياطية_تحويلات_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        function importJsonFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if (Array.isArray(imported)) {
+                        transactions = imported;
+                        saveStateToStorage(true);
+                        render();
+                        alert('تم استيراد النسخة الاحتياطية بنجاح!');
+                    }
+                } catch (err) { alert('خطأ في استيراد الملف!'); }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- Event Listeners Setup ---
+        function setupEventListeners() {
+            document.getElementById('toggleProfitBtn').addEventListener('click', toggleProfitVisibility);
+            document.getElementById('openNewModalBtn').addEventListener('click', openNewModal);
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+            document.getElementById('transactionForm').addEventListener('submit', saveTransaction);
+
+            document.getElementById('openCalcBtn').onclick = () => document.getElementById('calcModal').classList.remove('hidden');
+            document.getElementById('closeCalcBtn').onclick = () => document.getElementById('calcModal').classList.add('hidden');
+
+            document.getElementById('openContactsBtn').onclick = () => document.getElementById('contactsModal').classList.remove('hidden');
+            document.getElementById('closeContactsBtn').onclick = () => document.getElementById('contactsModal').classList.add('hidden');
+
+            document.getElementById('closeReceiptBtn').onclick = () => document.getElementById('receiptModal').classList.add('hidden');
+
+            // Exchange Calc Dynamic Inputs
+            const updateCalc = () => {
+                const amt = Number(document.getElementById('calcAmount').value) || 0;
+                const rate = Number(document.getElementById('calcRate').value) || 1;
+                const margin = Number(document.getElementById('calcMargin').value) || 0;
+
+                const costEur = amt / rate;
+                const billedEur = costEur * (1 + margin / 100);
+
+                document.getElementById('calcResultCost').innerText = '€' + costEur.toFixed(2);
+                document.getElementById('calcResultBilled').innerText = '€' + billedEur.toFixed(2);
+            };
+
+            ['calcAmount', 'calcRate', 'calcMargin'].forEach(id => document.getElementById(id).oninput = updateCalc);
+
+            // Add Contact Form
+            document.getElementById('addContactForm').onsubmit = (e) => {
+                e.preventDefault();
+                const name = document.getElementById('contactNameInput').value.trim();
+                const phone = document.getElementById('contactPhoneInput').value.trim();
+                if (name) {
+                    contacts.push({ name, phone });
+                    saveContacts();
+                    document.getElementById('contactNameInput').value = '';
+                    document.getElementById('contactPhoneInput').value = '';
+                }
+            };
+
+            // Set PIN
+            document.getElementById('setPinBtn').onclick = () => {
+                const newPin = prompt('أدخل رمز PIN الجديد المكون من 4 أرقام:', activePin);
+                if (newPin && newPin.length === 4) {
+                    activePin = newPin;
+                    localStorage.setItem(PIN_KEY, activePin);
+                    alert('تم تغيير رمز PIN بنجاح!');
+                } else if (newPin) {
+                    alert('الرمز يجب أن يتكون من 4 أرقام!');
+                }
+            };
+
+            document.getElementById('txCurrency').addEventListener('change', (e) => {
+                document.getElementById('customCurrencyBox').classList.toggle('hidden', e.target.value !== 'CUSTOM');
+            });
+
+            document.getElementById('addInstallmentBtn').addEventListener('click', () => addInstallmentInputRow());
+            document.getElementById('txBilledEur').addEventListener('input', updateFormCalculations);
+            document.getElementById('txPartnerCostEur').addEventListener('input', updateFormCalculations);
+
+            document.getElementById('undoBtn').addEventListener('click', undo);
+            document.getElementById('redoBtn').addEventListener('click', redo);
+
+            document.getElementById('searchInput').addEventListener('input', render);
+            document.getElementById('statusFilter').addEventListener('change', render);
+            document.getElementById('sortBySelect').addEventListener('change', render);
+
+            const menuBtn = document.getElementById('openBackupMenuBtn');
+            const menu = document.getElementById('backupMenu');
+            menuBtn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+            document.addEventListener('click', () => menu.classList.add('hidden'));
+
+            document.getElementById('exportCsvFullBtn').onclick = () => exportToCsv(true);
+            document.getElementById('exportCsvCleanBtn').onclick = () => exportToCsv(false);
+            document.getElementById('exportJsonBtn').onclick = exportToJson;
+            document.getElementById('importFileInput').onchange = importJsonFile;
+            document.getElementById('clearDataBtn').onclick = () => {
+                if (confirm('هل ترغب بإعادة التعيين إلى البيانات الافتراضية؟')) {
+                    transactions = [...INITIAL_DEMO_DATA];
+                    saveStateToStorage(true);
+                    render();
+                }
+            };
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
