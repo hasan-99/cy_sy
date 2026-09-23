@@ -247,7 +247,7 @@
                                 <i data-lucide="more-vertical" class="w-5 h-5"></i>
                             </button>
                             <div id="backupMenu" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 text-slate-800 z-50 text-xs sm:text-sm font-bold">
-                                <button id="setPinBtn" class="hidden w-full text-right px-4 py-2.5 hover:bg-slate-100 items-center gap-2">
+                                <button id="setPinBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
                                     <i data-lucide="key" class="w-4 h-4 text-indigo-600"></i> تغيير رمز PIN للحماية
                                 </button>
                                 <button id="exportCsvFullBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
@@ -656,6 +656,8 @@
         let expandedRows = new Set();
         let showProfit = true;
         let activePin = safeStorage.getItem(PIN_KEY) || "1234";
+        let inactivityTimer = null;
+        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000;
 
         const INITIAL_DEMO_DATA = [
             {
@@ -674,7 +676,8 @@
 
         window.onload = function() {
             lucide.createIcons();
-            // Preview mode opens directly; PIN protection remains in the original file.
+            setupPinAuth();
+            setupInactivityWatch();
             loadPrivacySetting();
             loadContacts();
             loadDistributorPayments();
@@ -691,14 +694,52 @@
             const pinInput = document.getElementById('pinInput');
             const pinError = document.getElementById('pinError');
 
-            unlockBtn.onclick = () => {
+            lockApp();
+
+            const tryUnlock = () => {
                 if (pinInput.value === activePin) {
                     overlay.classList.add('hidden');
+                    overlay.setAttribute('aria-hidden', 'true');
                     app.classList.remove('hidden');
+                    pinInput.value = '';
+                    pinError.classList.add('hidden');
+                    resetInactivityTimer();
                 } else {
                     pinError.classList.remove('hidden');
                 }
             };
+
+            unlockBtn.onclick = tryUnlock;
+            pinInput.onkeydown = (e) => {
+                if (e.key === 'Enter') tryUnlock();
+            };
+        }
+
+        function lockApp() {
+            const overlay = document.getElementById('pinOverlay');
+            const app = document.getElementById('appContainer');
+            const pinInput = document.getElementById('pinInput');
+            const pinError = document.getElementById('pinError');
+
+            overlay.classList.remove('hidden');
+            overlay.setAttribute('aria-hidden', 'false');
+            app.classList.add('hidden');
+            if (pinInput) pinInput.value = '';
+            if (pinError) pinError.classList.add('hidden');
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+        }
+
+        // --- Auto-logout after 5 minutes of inactivity ---
+        function resetInactivityTimer() {
+            if (document.getElementById('appContainer').classList.contains('hidden')) return;
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(lockApp, INACTIVITY_LIMIT_MS);
+        }
+
+        function setupInactivityWatch() {
+            ['click', 'keydown', 'mousemove', 'touchstart', 'scroll'].forEach((evt) => {
+                document.addEventListener(evt, resetInactivityTimer, { passive: true });
+            });
         }
 
         // --- Privacy & Data Management ---
