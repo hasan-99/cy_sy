@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة وحسابات تحويل الأموال المتكامل</title>
+    <title>دفتر تحويل الأموال — نسخة المعاينة</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,7 +28,125 @@
         }
     </script>
     <style>
+        * { box-sizing: border-box; }
+        html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
         body { font-family: 'Cairo', sans-serif; }
+        button, input, select { font: inherit; }
+        .app-header-inner {
+            min-height: 5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding-block: .75rem;
+        }
+        .app-brand { min-width: 0; }
+        .app-brand-title { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+        .app-toolbar { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .5rem; }
+        .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+        .summary-grid > div { min-width: 0; min-height: 8.25rem; gap: .75rem; }
+        .summary-grid h2 { overflow-wrap: anywhere; }
+        .filter-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+        .filter-controls select { width: 100%; min-width: 0; }
+        .filter-select { position: relative; min-width: 0; }
+        .filter-select select { padding-right: 3rem; padding-left: 2.25rem; min-height: 3rem; appearance: none; }
+        .filter-select-icon {
+            position: absolute;
+            right: .5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 2rem;
+            height: 2rem;
+            border-radius: .65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .filter-select-chevron {
+            position: absolute;
+            left: .65rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            pointer-events: none;
+        }
+        .filter-status .filter-select-icon { color: #0369a1; background: #e0f2fe; }
+        .filter-sort .filter-select-icon { color: #7c3aed; background: #ede9fe; }
+        .delivery-panel { padding: 1rem; }
+        .delivery-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.6fr) minmax(12rem, .9fr);
+            align-items: stretch;
+            gap: .75rem;
+        }
+        .delivery-grid > div { min-width: 0; display: flex; }
+        .delivery-grid input,
+        .delivery-grid select { width: 100%; min-width: 0; height: 3.25rem; }
+        #transactionModal input,
+        #transactionModal select { min-width: 0; }
+
+        @media (max-width: 1023px) {
+            .app-header-inner { flex-direction: column; align-items: stretch; }
+            .app-toolbar { width: 100%; justify-content: stretch; }
+            .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 767px) {
+            .app-header-inner { gap: .75rem; padding-block: .65rem; }
+            .app-brand { width: 100%; }
+            .app-brand-icon { padding: .65rem !important; }
+            .app-brand-title { font-size: 1.05rem !important; line-height: 1.35; }
+            .app-toolbar {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                grid-template-areas:
+                    "calc contacts privacy menu"
+                    "undo undo create create";
+                gap: .5rem;
+            }
+            #openCalcBtn { grid-area: calc; }
+            #openContactsBtn { grid-area: contacts; }
+            #toggleProfitBtn { grid-area: privacy; }
+            .undo-controls { grid-area: undo; }
+            #openNewModalBtn { grid-area: create; }
+            .backup-menu { grid-area: menu; }
+            .app-toolbar > button,
+            .app-toolbar > div { width: 100%; min-width: 0; }
+            .app-toolbar > button { justify-content: center; min-height: 2.75rem; padding: .65rem !important; }
+            .undo-controls { justify-content: space-evenly; min-height: 2.75rem; }
+            .backup-menu > button { width: 100%; display: flex; justify-content: center; }
+            #backupMenu { position: fixed; top: auto; right: 1rem; left: 1rem; width: auto; max-width: none; }
+            .filter-controls { width: 100%; }
+        }
+
+        @media (max-width: 539px) {
+            .app-brand-badge { display: none; }
+            .summary-grid { grid-template-columns: 1fr; gap: .75rem; }
+            .summary-grid > div { min-height: auto; padding: 1rem; }
+            .summary-grid > div > div:last-child { padding: .7rem; }
+            .delivery-panel { padding: .75rem; }
+            .delivery-grid { grid-template-columns: 1fr; }
+            #transactionModal { padding: .5rem; align-items: flex-end; }
+            #transactionModal > div { max-height: calc(100dvh - 1rem); border-radius: 1.25rem; }
+            #transactionModal form { padding: 1rem; }
+            .modal-summary { flex-direction: column; align-items: stretch; gap: .4rem; }
+            .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+            .modal-actions button { width: 100%; padding-inline: .75rem; }
+            .installment-row { flex-wrap: wrap; }
+            .installment-row > .relative { flex: 1 1 100%; }
+            .installment-row > .inst-date { flex: 1 1 calc(100% - 3rem); width: auto; }
+            #addContactForm { flex-direction: column; }
+            #addContactForm input, #addContactForm button { width: 100%; }
+            .receipt-actions { flex-direction: column; }
+            .receipt-actions button { width: 100%; justify-content: center; }
+        }
+
+        @media (max-width: 359px) {
+            .filter-controls { grid-template-columns: 1fr; }
+        }
+
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #cbd5e1; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
@@ -44,7 +162,7 @@
 <body class="h-full text-slate-900 antialiased bg-slate-100 flex flex-col font-sans">
 
     <!-- PIN Screen Overlay -->
-    <div id="pinOverlay" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
+    <div id="pinOverlay" class="fixed inset-0 z-50 bg-slate-900 hidden items-center justify-center p-4" aria-hidden="true">
         <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl space-y-6">
             <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
                 <i data-lucide="lock" class="w-8 h-8"></i>
@@ -60,27 +178,27 @@
     </div>
 
     <!-- Main Application Container -->
-    <div id="appContainer" class="flex-1 flex flex-col h-full hidden">
+    <div id="appContainer" class="flex-1 flex flex-col h-full">
         <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-lg border-b border-slate-800">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-20">
+                <div class="app-header-inner">
                     
                     <!-- Brand Title -->
-                    <div class="flex items-center gap-3">
-                        <div class="p-3 bg-emerald-500 text-slate-950 rounded-xl shadow-md font-bold">
+                    <div class="app-brand flex items-center gap-3">
+                        <div class="app-brand-icon p-3 bg-emerald-500 text-slate-950 rounded-xl shadow-md font-bold shrink-0">
                             <i data-lucide="arrow-right-left" class="w-7 h-7"></i>
                         </div>
                         <div>
-                            <h1 class="text-lg sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                            <h1 class="app-brand-title text-lg sm:text-2xl font-black tracking-tight text-white">
                                 دفتر تحويل الأموال
-                                <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">المطور الاحترافي</span>
+                                <span class="app-brand-badge text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">المطور الاحترافي</span>
                             </h1>
                             <p class="text-xs sm:text-sm font-semibold text-slate-300 hidden sm:block">متابعة دقيقة للحوالات، الأرباح، والوصلات المباشرة</p>
                         </div>
                     </div>
 
                     <!-- Controls Toolbar -->
-                    <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="app-toolbar">
                         
                         <!-- Currency Calc Button -->
                         <button id="openCalcBtn" title="حاسبة تحويل العملات" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
@@ -101,7 +219,7 @@
                         </button>
 
                         <!-- Undo / Redo controls -->
-                        <div class="flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700 shadow-inner">
+                        <div class="undo-controls flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700 shadow-inner">
                             <button id="undoBtn" title="تراجع" class="p-2 text-slate-200 hover:text-white hover:bg-slate-700 rounded-lg disabled:opacity-30 transition">
                                 <i data-lucide="undo" class="w-4 h-4"></i>
                             </button>
@@ -118,12 +236,12 @@
                         </button>
 
                         <!-- Backup / Settings Menu -->
-                        <div class="relative inline-block text-right">
+                        <div class="backup-menu relative inline-block text-right">
                             <button id="openBackupMenuBtn" class="p-2.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition">
                                 <i data-lucide="more-vertical" class="w-5 h-5"></i>
                             </button>
                             <div id="backupMenu" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 text-slate-800 z-50 text-xs sm:text-sm font-bold">
-                                <button id="setPinBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
+                                <button id="setPinBtn" class="hidden w-full text-right px-4 py-2.5 hover:bg-slate-100 items-center gap-2">
                                     <i data-lucide="key" class="w-4 h-4 text-indigo-600"></i> تغيير رمز PIN للحماية
                                 </button>
                                 <button id="exportCsvFullBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
@@ -154,7 +272,7 @@
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
 
             <!-- Dynamic KPI Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="summary-grid">
                 <div class="bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wider text-slate-500">إجمالي المبالغ المسلّمة</p>
@@ -207,26 +325,34 @@
                     <input type="text" id="searchInput" placeholder="بحث باسم الزبون، الوسيط، الملاحظات..." class="w-full pr-11 pl-4 py-3 border-2 border-slate-300 rounded-xl text-xs sm:text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition">
                 </div>
 
-                <div class="flex items-center gap-3 overflow-x-auto pb-1 md:pb-0">
-                    <select id="statusFilter" class="border-2 border-slate-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-bold bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
-                        <option value="ALL">جميع الحالات</option>
-                        <option value="PENDING">متبقي (غير مكتمل)</option>
-                        <option value="PAID">مكتمل بالكامل</option>
-                    </select>
+                <div class="filter-controls">
+                    <div class="filter-select filter-status">
+                        <span class="filter-select-icon"><i data-lucide="list-filter" class="w-4 h-4"></i></span>
+                        <select id="statusFilter" aria-label="تصفية حسب الحالة" class="border-2 border-slate-300 rounded-xl py-3 text-xs sm:text-sm font-bold bg-white focus:ring-2 focus:ring-sky-400 outline-none transition">
+                            <option value="ALL">جميع الحالات</option>
+                            <option value="PENDING">متبقي (غير مكتمل)</option>
+                            <option value="PAID">مكتمل بالكامل</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="filter-select-chevron w-4 h-4"></i>
+                    </div>
 
-                    <select id="sortBySelect" class="border-2 border-slate-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-bold bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
-                        <option value="DATE_DESC">الأحدث أولاً</option>
-                        <option value="DATE_ASC">الأقدم أولاً</option>
-                        <option value="NAME_ASC">اسم الزبون (أ - ي)</option>
-                        <option value="BALANCE_DESC">أعلى مبلغ متبقي</option>
-                    </select>
+                    <div class="filter-select filter-sort">
+                        <span class="filter-select-icon"><i data-lucide="arrow-up-down" class="w-4 h-4"></i></span>
+                        <select id="sortBySelect" aria-label="ترتيب المعاملات" class="border-2 border-slate-300 rounded-xl py-3 text-xs sm:text-sm font-bold bg-white focus:ring-2 focus:ring-violet-400 outline-none transition">
+                            <option value="DATE_DESC">الأحدث أولاً</option>
+                            <option value="DATE_ASC">الأقدم أولاً</option>
+                            <option value="NAME_ASC">اسم الزبون (أ - ي)</option>
+                            <option value="BALANCE_DESC">أعلى مبلغ متبقي</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="filter-select-chevron w-4 h-4"></i>
+                    </div>
                 </div>
             </div>
 
             <!-- Transactions Ledger View -->
             <div class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
-                <div class="hidden md:block overflow-x-auto flex-1">
-                    <table class="w-full text-right text-sm border-collapse">
+                <div class="hidden lg:block overflow-x-auto flex-1">
+                    <table class="w-full min-w-[1050px] text-right text-sm border-collapse">
                         <thead class="bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="py-4 px-3 w-10 text-center">تفاصيل</th>
@@ -246,7 +372,7 @@
                     </table>
                 </div>
 
-                <div id="mobileCardsContainer" class="block md:hidden p-4 space-y-4"></div>
+                <div id="mobileCardsContainer" class="block lg:hidden p-3 sm:p-4 space-y-4"></div>
 
                 <div id="emptyState" class="hidden py-16 text-center">
                     <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -262,7 +388,7 @@
     <!-- Transaction Form Modal -->
     <div id="transactionModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-slate-200 overflow-hidden my-auto max-h-[95vh] flex flex-col">
-            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+            <div class="bg-slate-900 text-white px-4 sm:px-6 py-4 flex items-center justify-between gap-3 shrink-0">
                 <div>
                     <h3 id="modalTitle" class="text-base sm:text-xl font-black">إضافة معاملة تحويل جديدة</h3>
                     <p class="text-xs text-slate-300 font-medium">تسليم الزبون والدفعات المقبوضة باليورو</p>
@@ -287,10 +413,10 @@
                     </div>
                 </div>
 
-                <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3">
+                <div class="delivery-panel bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3">
                     <label class="block text-xs font-black text-slate-800 uppercase">المبلغ المسلّم للزبون وعملة الاستلام *</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div class="sm:col-span-2 relative">
+                    <div class="delivery-grid">
+                        <div class="relative">
                             <input type="number" step="0.01" min="0" id="txDeliveredAmount" required placeholder="1000.00" class="w-full pl-3 pr-4 py-2.5 border-2 border-slate-300 rounded-xl text-sm font-black focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                         </div>
                         <div>
@@ -324,7 +450,7 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between text-xs sm:text-sm font-black bg-emerald-100 text-emerald-950 border-2 border-emerald-300 rounded-xl px-4 py-3">
+                <div class="modal-summary flex items-center justify-between text-xs sm:text-sm font-black bg-emerald-100 text-emerald-950 border-2 border-emerald-300 rounded-xl px-4 py-3">
                     <span id="modalProfitPreviewSpan">الأرباح المتوقعة: <strong id="formProfitPreview" class="text-emerald-700 text-base">€0.00</strong></span>
                     <span>المتبقي: <strong id="formRemainingPreview" class="text-amber-700 text-base">€0.00</strong></span>
                 </div>
@@ -350,7 +476,7 @@
                     <div id="installmentsContainer" class="space-y-2"></div>
                 </div>
 
-                <div class="flex items-center justify-end gap-3 pt-4 border-t-2 border-slate-100 shrink-0">
+                <div class="modal-actions flex items-center justify-end gap-3 pt-4 border-t-2 border-slate-100 shrink-0">
                     <button type="button" id="cancelModalBtn" class="px-5 py-2.5 text-sm font-extrabold text-slate-600 hover:bg-slate-100 rounded-xl transition">إلغاء</button>
                     <button type="submit" class="px-6 py-2.5 text-sm font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl shadow-md transition">حفظ المعاملة</button>
                 </div>
@@ -373,7 +499,7 @@
                 <!-- Injected via JS -->
             </div>
 
-            <div class="flex items-center gap-2 pt-4 border-t border-slate-200 no-print">
+            <div class="receipt-actions flex items-center gap-2 pt-4 border-t border-slate-200 no-print">
                 <button id="whatsappBtn" class="flex-1 py-2.5 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl flex items-center justify-center gap-2 text-xs">
                     <i data-lucide="message-square" class="w-4 h-4"></i> إرسال واتساب
                 </button>
@@ -437,6 +563,21 @@
     </div>
 
     <script>
+        // Embedded previews may block localStorage. Fall back to memory so the
+        // interface remains fully usable during review.
+        const memoryStorage = new Map();
+        const safeStorage = {
+            getItem(key) {
+                try { return window.localStorage.getItem(key); }
+                catch (error) { return memoryStorage.has(key) ? memoryStorage.get(key) : null; }
+            },
+            setItem(key, value) {
+                const normalizedValue = String(value);
+                memoryStorage.set(key, normalizedValue);
+                try { window.localStorage.setItem(key, normalizedValue); } catch (error) {}
+            }
+        };
+
         const STORAGE_KEY = 'money_transfer_ledger_v4';
         const PRIVACY_KEY = 'money_transfer_privacy_show_profit';
         const PIN_KEY = 'money_transfer_app_pin';
@@ -448,7 +589,7 @@
         let redoStack = [];
         let expandedRows = new Set();
         let showProfit = true;
-        let activePin = localStorage.getItem(PIN_KEY) || "1234";
+        let activePin = safeStorage.getItem(PIN_KEY) || "1234";
 
         const INITIAL_DEMO_DATA = [
             {
@@ -467,7 +608,7 @@
 
         window.onload = function() {
             lucide.createIcons();
-            setupPinAuth();
+            // Preview mode opens directly; PIN protection remains in the original file.
             loadPrivacySetting();
             loadContacts();
             loadFromStorage();
@@ -495,14 +636,14 @@
 
         // --- Privacy & Data Management ---
         function loadPrivacySetting() {
-            const saved = localStorage.getItem(PRIVACY_KEY);
+            const saved = safeStorage.getItem(PRIVACY_KEY);
             showProfit = saved !== null ? saved === 'true' : true;
             updatePrivacyUI();
         }
 
         function toggleProfitVisibility() {
             showProfit = !showProfit;
-            localStorage.setItem(PRIVACY_KEY, showProfit);
+            safeStorage.setItem(PRIVACY_KEY, showProfit);
             updatePrivacyUI();
             render();
         }
@@ -523,7 +664,7 @@
         }
 
         function loadFromStorage() {
-            const saved = localStorage.getItem(STORAGE_KEY);
+            const saved = safeStorage.getItem(STORAGE_KEY);
             try { transactions = saved ? JSON.parse(saved) : [...INITIAL_DEMO_DATA]; }
             catch (e) { transactions = [...INITIAL_DEMO_DATA]; }
         }
@@ -533,7 +674,7 @@
                 undoStack.push(JSON.stringify(transactions));
                 redoStack = [];
             }
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            safeStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
             updateUndoRedoButtons();
         }
 
@@ -541,7 +682,7 @@
             if (!undoStack.length) return;
             redoStack.push(JSON.stringify(transactions));
             transactions = JSON.parse(undoStack.pop());
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            safeStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
             updateUndoRedoButtons();
             render();
         }
@@ -550,7 +691,7 @@
             if (!redoStack.length) return;
             undoStack.push(JSON.stringify(transactions));
             transactions = JSON.parse(redoStack.pop());
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            safeStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
             updateUndoRedoButtons();
             render();
         }
@@ -562,13 +703,13 @@
 
         // --- Contacts Management ---
         function loadContacts() {
-            const saved = localStorage.getItem(CONTACTS_KEY);
+            const saved = safeStorage.getItem(CONTACTS_KEY);
             contacts = saved ? JSON.parse(saved) : [{ name: 'حسن الجاهوش', phone: '003579000000' }];
             renderContacts();
         }
 
         function saveContacts() {
-            localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+            safeStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
             renderContacts();
         }
 
@@ -1070,7 +1211,7 @@
                 const newPin = prompt('أدخل رمز PIN الجديد المكون من 4 أرقام:', activePin);
                 if (newPin && newPin.length === 4) {
                     activePin = newPin;
-                    localStorage.setItem(PIN_KEY, activePin);
+                    safeStorage.setItem(PIN_KEY, activePin);
                     alert('تم تغيير رمز PIN بنجاح!');
                 } else if (newPin) {
                     alert('الرمز يجب أن يتكون من 4 أرقام!');
