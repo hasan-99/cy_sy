@@ -698,9 +698,9 @@
 
             const tryUnlock = () => {
                 if (pinInput.value === activePin) {
-                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
                     overlay.setAttribute('aria-hidden', 'true');
-                    app.classList.remove('hidden');
+                    app.style.display = '';
                     pinInput.value = '';
                     pinError.classList.add('hidden');
                     resetInactivityTimer();
@@ -721,9 +721,9 @@
             const pinInput = document.getElementById('pinInput');
             const pinError = document.getElementById('pinError');
 
-            overlay.classList.remove('hidden');
+            overlay.style.display = 'flex';
             overlay.setAttribute('aria-hidden', 'false');
-            app.classList.add('hidden');
+            app.style.display = 'none';
             if (pinInput) pinInput.value = '';
             if (pinError) pinError.classList.add('hidden');
             if (inactivityTimer) clearTimeout(inactivityTimer);
@@ -731,7 +731,7 @@
 
         // --- Auto-logout after 5 minutes of inactivity ---
         function resetInactivityTimer() {
-            if (document.getElementById('appContainer').classList.contains('hidden')) return;
+            if (document.getElementById('appContainer').style.display === 'none') return;
             if (inactivityTimer) clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(lockApp, INACTIVITY_LIMIT_MS);
         }
