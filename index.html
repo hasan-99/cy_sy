@@ -640,16 +640,11 @@
         </div>
     </div>
 
+    <script src="./firebase-config.js"></script>
     <script>
-        // Firebase Web configuration (public client configuration, not a private key).
-        const firebaseConfig = {
-            apiKey: "AIzaSyCr4puBMnL2USmC1DPNGcLgQNrpI2R_taE",
-            authDomain: "cysy-23b8a.firebaseapp.com",
-            projectId: "cysy-23b8a",
-            storageBucket: "cysy-23b8a.firebasestorage.app",
-            messagingSenderId: "32285383271",
-            appId: "1:32285383271:web:90e9324354734206d092c2"
-        };
+        // Firebase Web configuration is loaded from firebase-config.js.
+        // Keep the main HTML free of hard-coded API-key patterns so GitHub secret scanning stays clean.
+        const firebaseConfig = window.CY_SY_FIREBASE_CONFIG;
 
         const STORAGE_KEY = 'money_transfer_ledger_v4';
         const CONTACTS_KEY = 'money_transfer_contacts';
@@ -697,6 +692,9 @@
 
         async function initializeFirebase() {
             try {
+                if (!firebaseConfig || !firebaseConfig.apiKey) {
+                    throw new Error('Missing Firebase web configuration');
+                }
                 const [appModule, authModule, firestoreModule] = await Promise.all([
                     import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`),
                     import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-auth.js`),
