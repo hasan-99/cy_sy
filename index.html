@@ -46,8 +46,11 @@
         .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
         .summary-grid > div { min-width: 0; min-height: 8.25rem; gap: .75rem; }
         .summary-grid h2 { overflow-wrap: anywhere; }
+        .insight-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+        .quick-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
         .filter-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
         .filter-controls select { width: 100%; min-width: 0; }
+        .date-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
         .filter-select { position: relative; min-width: 0; }
         .filter-select select { padding-right: 3rem; padding-left: 2.25rem; min-height: 3rem; appearance: none; }
         .filter-select-icon {
@@ -103,6 +106,13 @@
             display: inline-flex;
             justify-content: center;
         }
+        .modal-shell { max-height: 92vh; display: flex; flex-direction: column; }
+        .modal-scroll { overflow-y: auto; }
+        .feature-chip { min-height: 2.5rem; }
+        .activity-item { border-right: 4px solid #10b981; }
+        .activity-item.delete { border-right-color: #ef4444; }
+        .activity-item.update { border-right-color: #f59e0b; }
+        .activity-item.import { border-right-color: #6366f1; }
 
         @media (max-width: 1023px) {
             .app-header-inner { flex-direction: column; align-items: stretch; }
@@ -119,14 +129,13 @@
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
                 grid-template-areas:
-                    "calc contacts admin privacy"
+                    "calc contacts admin menu"
                     "undo create create menu";
                 gap: .5rem;
             }
             #openCalcBtn { grid-area: calc; }
             #openContactsBtn { grid-area: contacts; }
             #openAdminBtn { grid-area: admin; }
-            #toggleProfitBtn { grid-area: privacy; }
             .undo-controls { grid-area: undo; }
             #openNewModalBtn { grid-area: create; }
             .backup-menu { grid-area: menu; }
@@ -137,6 +146,8 @@
             .backup-menu > button { width: 100%; display: flex; justify-content: center; }
             #backupMenu { position: fixed; top: auto; right: 1rem; left: 1rem; width: auto; max-width: none; }
             .filter-controls { width: 100%; }
+            .insight-grid { grid-template-columns: 1fr; }
+            .date-filter-grid { grid-template-columns: 1fr 1fr; }
         }
 
         @media (max-width: 539px) {
@@ -159,6 +170,8 @@
             #addContactForm input, #addContactForm button { width: 100%; }
             .receipt-actions { flex-direction: column; }
             .receipt-actions button { width: 100%; justify-content: center; }
+            .date-filter-grid { grid-template-columns: 1fr; }
+            .quick-actions > button { flex: 1 1 100%; justify-content: center; }
         }
 
         @media (max-width: 359px) {
@@ -171,8 +184,10 @@
         ::-webkit-scrollbar-thumb:hover { background: #1e293b; }
         @media print {
             body * { visibility: hidden; }
-            #receiptModal, #receiptModal * { visibility: visible; }
-            #receiptModal { position: absolute; left: 0; top: 0; width: 100%; background: white; }
+            #receiptModal:not(.hidden), #receiptModal:not(.hidden) *,
+            #reportModal:not(.hidden), #reportModal:not(.hidden) * { visibility: visible; }
+            #receiptModal:not(.hidden),
+            #reportModal:not(.hidden) { position: absolute; left: 0; top: 0; width: 100%; background: white; }
             .no-print { display: none !important; }
         }
     </style>
@@ -241,18 +256,21 @@
                             <span class="hidden lg:inline">الأسماء</span>
                         </button>
 
+                        <button id="openActivityBtn" title="سجل النشاط" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
+                            <i data-lucide="history" class="w-4 h-4 text-cyan-400"></i>
+                            <span class="hidden lg:inline">النشاط</span>
+                        </button>
+
+                        <button id="openReportBtn" title="تقرير سريع" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
+                            <i data-lucide="file-text" class="w-4 h-4 text-violet-400"></i>
+                            <span class="hidden lg:inline">تقرير</span>
+                        </button>
+
                         <button id="openAdminBtn" title="لوحة الإدارة المالية" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
                             <i data-lucide="wallet-cards" class="w-4 h-4 text-amber-400"></i>
                             <span class="hidden lg:inline">الإدارة</span>
                         </button>
-
-                        <!-- Privacy Toggle Button -->
-                        <button id="toggleProfitBtn" title="إظهار/إخفاء الأرباح" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
-                            <i id="profitEyeIcon" data-lucide="eye-off" class="w-4 h-4 text-emerald-400"></i>
-                            <span id="profitBtnText" class="hidden md:inline">إخفاء الأرباح</span>
-                        </button>
-
-                        <!-- Undo / Redo controls -->
+<!-- Undo / Redo controls -->
                         <div class="undo-controls flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700 shadow-inner">
                             <button id="undoBtn" title="تراجع" class="p-2 text-slate-200 hover:text-white hover:bg-slate-700 rounded-lg disabled:opacity-30 transition">
                                 <i data-lucide="undo" class="w-4 h-4"></i>
@@ -290,14 +308,16 @@
                                 <button id="exportJsonBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
                                     <i data-lucide="download" class="w-4 h-4 text-slate-600"></i> تصدير نسخة احتياطية (JSON)
                                 </button>
+                                <button id="downloadAutoBackupBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="archive-restore" class="w-4 h-4 text-cyan-600"></i> تنزيل آخر نسخة تلقائية
+                                </button>
+                                <button id="openArchiveBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="archive" class="w-4 h-4 text-amber-600"></i> أرشيف المحذوفات
+                                </button>
                                 <label class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer">
                                     <i data-lucide="upload" class="w-4 h-4 text-slate-600"></i> استيراد نسخة احتياطية
                                     <input type="file" id="importFileInput" accept=".json" class="hidden">
                                 </label>
-                                <hr class="my-1.5 border-slate-200">
-                                <button id="clearDataBtn" class="w-full text-right px-4 py-2.5 text-red-600 hover:bg-red-50 flex items-center gap-2">
-                                    <i data-lucide="rotate-ccw" class="w-4 h-4 text-red-500"></i> استعادة البيانات الافتراضية
-                                </button>
                             </div>
                         </div>
 
@@ -354,11 +374,12 @@
                     </div>
                 </div>
             </div>
+
             <!-- Search and Filter Bar -->
             <div class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="relative flex-1">
                     <i data-lucide="search" class="w-5 h-5 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" id="searchInput" placeholder="بحث باسم الزبون، الوسيط، الملاحظات..." class="w-full pr-11 pl-4 py-3 border-2 border-slate-300 rounded-xl text-xs sm:text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                    <input type="text" id="searchInput" placeholder="بحث ذكي: اسم، رقم، تاريخ، وسيط، ملاحظة..." class="w-full pr-11 pl-4 py-3 border-2 border-slate-300 rounded-xl text-xs sm:text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition">
                 </div>
 
                 <div class="filter-controls">
@@ -381,6 +402,28 @@
                             <option value="BALANCE_DESC">أعلى مبلغ متبقي</option>
                         </select>
                         <i data-lucide="chevron-down" class="filter-select-chevron w-4 h-4"></i>
+                    </div>
+                </div>
+
+                <div class="relative w-full md:w-auto">
+                    <button id="paymentAlertsBtn" class="relative w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-rose-100 text-xs sm:text-sm font-black transition">
+                        <i data-lucide="bell-ring" class="w-5 h-5"></i>
+                        <span>تنبيهات</span>
+                        <span id="paymentAlertsBadge" class="hidden absolute -top-2 -right-2 min-w-6 h-6 px-1 rounded-full bg-rose-600 text-white text-[11px] leading-6 text-center font-black shadow">0</span>
+                    </button>
+                    <div id="paymentAlertsPanel" class="hidden absolute left-0 right-0 md:right-auto mt-2 w-full md:w-96 bg-white border-2 border-rose-100 rounded-2xl shadow-xl z-30 overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 bg-rose-50">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">تنبيهات الدفعات</p>
+                                    <p id="paymentAlertsSummary" class="text-xs font-bold text-slate-500 mt-1">لا توجد تنبيهات</p>
+                                </div>
+                                <button id="pendingOnlyBtn" class="px-3 py-2 rounded-xl bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black">
+                                    عرض غير المكتمل
+                                </button>
+                            </div>
+                        </div>
+                        <div id="paymentAlertsList" class="max-h-80 overflow-y-auto p-3 space-y-2"></div>
                     </div>
                 </div>
             </div>
@@ -656,6 +699,99 @@
         </div>
     </div>
 
+    <!-- Activity Log Modal -->
+    <div id="activityModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-slate-200 overflow-hidden modal-shell text-right">
+            <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-black text-cyan-300 uppercase">Activity Log</p>
+                    <h3 class="text-lg font-black">سجل النشاط والتعديلات</h3>
+                </div>
+                <button id="closeActivityBtn" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="activityList" class="modal-scroll p-4 sm:p-5 space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Deleted Archive Modal -->
+    <div id="archiveModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-slate-200 overflow-hidden modal-shell text-right">
+            <div class="bg-amber-700 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-black text-amber-100 uppercase">Deleted Archive</p>
+                    <h3 class="text-lg font-black">أرشيف المحذوفات</h3>
+                </div>
+                <button id="closeArchiveBtn" class="text-amber-100 hover:text-white p-2 rounded-xl hover:bg-amber-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="archiveList" class="modal-scroll p-4 sm:p-5 space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Customer Detail Modal -->
+    <div id="customerModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border-2 border-slate-200 overflow-hidden modal-shell text-right">
+            <div class="bg-blue-700 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-black text-blue-100 uppercase">Customer Page</p>
+                    <h3 id="customerModalTitle" class="text-lg font-black">صفحة الزبون</h3>
+                </div>
+                <button id="closeCustomerBtn" class="text-blue-100 hover:text-white p-2 rounded-xl hover:bg-blue-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="customerContent" class="modal-scroll p-4 sm:p-5 space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border-2 border-slate-200 overflow-hidden modal-shell text-right">
+            <div class="bg-violet-700 text-white px-5 py-4 flex items-center justify-between no-print">
+                <div>
+                    <p class="text-xs font-black text-violet-100 uppercase">Printable Report</p>
+                    <h3 class="text-lg font-black">تقرير الحوالات</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="printReportBtn" class="px-3 py-2 bg-white text-violet-800 rounded-xl text-xs font-black flex items-center gap-2"><i data-lucide="printer" class="w-4 h-4"></i> PDF / طباعة</button>
+                    <button id="closeReportBtn" class="text-violet-100 hover:text-white p-2 rounded-xl hover:bg-violet-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+            </div>
+            <div id="reportContent" class="modal-scroll p-5 sm:p-7 space-y-5"></div>
+        </div>
+    </div>
+
+    <!-- Review Before Save Modal -->
+    <div id="reviewModal" class="hidden fixed inset-0 z-[65] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border-2 border-emerald-200 overflow-hidden text-right">
+            <div class="bg-emerald-600 text-white px-5 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-black">مراجعة قبل الحفظ</h3>
+                <button id="cancelReviewBtn" class="text-emerald-100 hover:text-white p-2 rounded-xl hover:bg-emerald-700"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="reviewContent" class="p-5 space-y-3 text-sm font-bold text-slate-800"></div>
+            <div class="p-5 pt-0 flex items-center justify-end gap-2">
+                <button id="backToEditBtn" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-black">تعديل</button>
+                <button id="confirmReviewSaveBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-black">تأكيد الحفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Safer Delete Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 z-[65] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border-2 border-red-200 overflow-hidden text-right">
+            <div class="bg-red-600 text-white px-5 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-black">تأكيد الحذف</h3>
+                <button id="cancelDeleteBtn" class="text-red-100 hover:text-white p-2 rounded-xl hover:bg-red-700"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div id="deleteSummary" class="text-sm font-bold text-slate-800"></div>
+                <label class="block text-xs font-black text-red-700">اكتب حذف للتأكيد</label>
+                <input id="deleteConfirmInput" type="text" class="w-full border-2 border-red-200 rounded-xl px-3 py-2 text-sm font-black outline-none focus:border-red-500">
+                <div class="flex items-center justify-end gap-2">
+                    <button id="closeDeleteBtn" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-black">إلغاء</button>
+                    <button id="confirmDeleteBtn" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-black disabled:opacity-40" disabled>حذف نهائي</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="./firebase-config.js"></script>
     <script>
         // Firebase Web configuration is loaded from firebase-config.js.
@@ -666,11 +802,15 @@
         const CONTACTS_KEY = 'money_transfer_contacts';
         const DISTRIBUTOR_PAYMENTS_KEY = 'money_transfer_distributor_payments_v1';
         const MIGRATION_KEY = 'firebaseMigrationCompleted';
+        const ACTIVITY_LOG_KEY = 'money_transfer_activity_log_v1';
+        const AUTO_BACKUP_KEY = 'money_transfer_auto_backup_v1';
+        const USER_ROLE_KEY = 'money_transfer_user_role_v1';
         const FIREBASE_SDK_VERSION = '12.3.0';
 
         let transactions = [];
         let contacts = [];
         let distributorPayments = [];
+        let deletedTransfers = [];
         let undoStack = [];
         let redoStack = [];
         let expandedRows = new Set();
@@ -682,7 +822,21 @@
         let unsubscribeTransfers = null;
         let unsubscribeContacts = null;
         let unsubscribePayments = null;
+        let unsubscribeDeletedTransfers = null;
         let isSubmitting = false;
+        let pendingReviewData = null;
+        let pendingDeleteId = null;
+        let currentRole = 'admin';
+
+        Object.defineProperties(window, {
+            transactions: { get: () => transactions },
+            contacts: { get: () => contacts },
+            distributorPayments: { get: () => distributorPayments },
+            deletedTransfers: { get: () => deletedTransfers },
+            currentUser: { get: () => currentUser },
+            db: { get: () => db },
+            fb: { get: () => fb }
+        });
 
         const INITIAL_DEMO_DATA = [
             {
@@ -702,6 +856,7 @@
         window.onload = async function() {
             lucide.createIcons();
             setupEventListeners();
+            applyRoleUI();
             render();
             await initializeFirebase();
         };
@@ -790,16 +945,99 @@
         function updatePrivacyUI() {
             const eyeIcon = document.getElementById('profitEyeIcon');
             const btnText = document.getElementById('profitBtnText');
-            const kpiProfitCard = document.getElementById('kpiProfitCard');
 
             const modalProfitPreviewSpan = document.getElementById('modalProfitPreviewSpan');
 
             if (eyeIcon) eyeIcon.setAttribute('data-lucide', showProfit ? 'eye-off' : 'eye');
             if (btnText) btnText.innerText = showProfit ? 'إخفاء الأرباح' : 'إظهار الأرباح';
-            if (kpiProfitCard) kpiProfitCard.classList.toggle('hidden', !showProfit);
 
             if (modalProfitPreviewSpan) modalProfitPreviewSpan.classList.toggle('hidden', !showProfit);
             lucide.createIcons();
+        }
+
+        function addActivity(type, title, detail = '') {
+            const next = getActivityLog();
+            next.unshift({
+                type,
+                title,
+                detail,
+                at: new Date().toISOString(),
+                user: currentUser ? currentUser.email : 'local'
+            });
+            localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(next.slice(0, 80)));
+        }
+
+        function getActivityLog() {
+            try { return JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || '[]'); }
+            catch (error) { return []; }
+        }
+
+        function renderActivityLog() {
+            const list = document.getElementById('activityList');
+            const items = getActivityLog();
+            if (!items.length) {
+                list.innerHTML = '<p class="text-sm font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-2xl p-4">لا يوجد نشاط مسجل حتى الآن.</p>';
+                return;
+            }
+            list.innerHTML = items.map(item => `
+                <div class="activity-item ${escapeHtml(item.type)} bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                        <p class="text-sm font-black text-slate-900">${escapeHtml(item.title)}</p>
+                        <p class="text-xs font-bold text-slate-500" dir="ltr">${formatDateTime(item.at)}</p>
+                    </div>
+                    <p class="text-xs font-bold text-slate-600 mt-1">${escapeHtml(item.detail)}</p>
+                    <p class="text-[11px] font-bold text-slate-400 mt-1">${escapeHtml(item.user || '')}</p>
+                </div>
+            `).join('');
+        }
+
+        function openActivityModal() {
+            renderActivityLog();
+            document.getElementById('activityModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function saveAutoBackup() {
+            const backup = {
+                createdAt: new Date().toISOString(),
+                transactions,
+                contacts,
+                distributorPayments,
+                deletedTransfers
+            };
+            try { localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(backup)); }
+            catch (error) { console.warn('Auto backup failed', error); }
+        }
+
+        function downloadAutoBackup() {
+            const backup = localStorage.getItem(AUTO_BACKUP_KEY);
+            if (!backup) { showToast('لا توجد نسخة تلقائية محفوظة بعد', true); return; }
+            downloadTextFile(backup, `نسخة_تلقائية_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+        }
+
+        function downloadTextFile(text, filename, mime = 'text/plain') {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([text], { type: `${mime};charset=utf-8` }));
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        function applyRoleUI() {
+            currentRole = 'admin';
+            showProfit = true;
+            const adminBtn = document.getElementById('openAdminBtn');
+            const profitBtn = document.getElementById('toggleProfitBtn');
+            if (adminBtn) adminBtn.classList.remove('hidden');
+            if (profitBtn) profitBtn.classList.remove('hidden');
+            updatePrivacyUI();
+        }
+
+        function formatDateTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' });
         }
 
         function normalizeFirestoreDoc(snapshot) {
@@ -816,23 +1054,30 @@
             unsubscribeTransfers = fb.onSnapshot(fb.collection(db, 'transfers'), snapshot => {
                 transactions = snapshot.docs.map(normalizeFirestoreDoc);
                 transactions.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || (b.createdAt || 0) - (a.createdAt || 0));
+                saveAutoBackup();
                 render();
                 setBusy(false);
             }, handleFirestoreError);
             unsubscribeContacts = fb.onSnapshot(fb.collection(db, 'contacts'), snapshot => {
                 contacts = snapshot.docs.map(normalizeFirestoreDoc).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar'));
+                saveAutoBackup();
                 renderContacts();
             }, handleFirestoreError);
             unsubscribePayments = fb.onSnapshot(fb.collection(db, 'distributorPayments'), snapshot => {
                 distributorPayments = snapshot.docs.map(normalizeFirestoreDoc);
+                saveAutoBackup();
                 renderAdminFinance();
                 renderDashboardKPIs();
             }, handleFirestoreError);
+            unsubscribeDeletedTransfers = fb.onSnapshot(fb.collection(db, 'deletedTransfers'), snapshot => {
+                deletedTransfers = snapshot.docs.map(normalizeFirestoreDoc);
+                renderArchive();
+            }, error => console.warn('Deleted archive listener failed', error));
         }
 
         function stopSubscriptions() {
-            [unsubscribeTransfers, unsubscribeContacts, unsubscribePayments].forEach(fn => { if (fn) fn(); });
-            unsubscribeTransfers = unsubscribeContacts = unsubscribePayments = null;
+            [unsubscribeTransfers, unsubscribeContacts, unsubscribePayments, unsubscribeDeletedTransfers].forEach(fn => { if (fn) fn(); });
+            unsubscribeTransfers = unsubscribeContacts = unsubscribePayments = unsubscribeDeletedTransfers = null;
         }
 
         function pushUndoSnapshot() {
@@ -968,6 +1213,7 @@
                 await fb.addDoc(fb.collection(db, 'distributorPayments'), { amount, date, createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email });
                 amountInput.value = '';
                 amountInput.focus();
+                addActivity('create', 'إضافة تسليم للموزع', `${formatMoney(amount)} - ${date}`);
                 showToast('تم حفظ دفعة الموزّع بنجاح');
             } catch (error) { showToast('حدث خطأ أثناء الحفظ', true); }
             finally { setBusy(false); }
@@ -975,7 +1221,12 @@
 
         async function deleteDistributorPayment(id) {
             if (!confirm('هل تريد حذف هذا التسليم للموزّع؟')) return;
-            try { await fb.deleteDoc(fb.doc(db, 'distributorPayments', id)); showToast('تم حذف الدفعة بنجاح'); }
+            try {
+                const payment = distributorPayments.find(item => item.id === id);
+                await fb.deleteDoc(fb.doc(db, 'distributorPayments', id));
+                addActivity('delete', 'حذف تسليم للموزع', payment ? `${formatMoney(payment.amount)} - ${payment.date}` : id);
+                showToast('تم حذف الدفعة بنجاح');
+            }
             catch (error) { showToast('حدث خطأ أثناء الحذف', true); }
         }
 
@@ -1024,21 +1275,39 @@
             return `${sign}${formatNumber(number, maxDigits)}${symbol ? ` ${symbol}` : ''}`;
         }
 
+        function getNextFridayText() {
+            const date = new Date();
+            const day = date.getDay();
+            const daysUntilFriday = (5 - day + 7) % 7 || 7;
+            date.setDate(date.getDate() + daysUntilFriday);
+            return date.toISOString().split('T')[0];
+        }
+
+        function getPaymentReminderHtml(remaining, compact = false) {
+            if (remaining <= 0) return '';
+            const text = `تذكير الجمعة ${getNextFridayText()}`;
+            return compact
+                ? `<span class="inline-flex mt-1 px-2 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-black">${text}</span>`
+                : `<div class="mt-1 text-[11px] font-black text-rose-700">تذكير دفع كل جمعة حتى اكتمال الدفع</div>`;
+        }
+
         function getFilteredTransactions() {
             const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
             const statusFilter = document.getElementById('statusFilter').value;
             const sortBy = document.getElementById('sortBySelect').value;
 
             return transactions.filter(tx => {
-                const { isPaid } = calculateTotals(tx);
+                const totals = calculateTotals(tx);
+                const { isPaid } = totals;
                 if (statusFilter === 'PAID' && !isPaid) return false;
                 if (statusFilter === 'PENDING' && isPaid) return false;
 
                 if (search) {
-                    const client = (tx.clientName || '').toLowerCase();
-                    const partner = (tx.partnerName || '').toLowerCase();
-                    const notes = (tx.notes || '').toLowerCase();
-                    if (!client.includes(search) && !partner.includes(search) && !notes.includes(search)) return false;
+                    const haystack = [
+                        tx.id, tx.date, tx.clientName, tx.partnerName, tx.notes, tx.currency,
+                        tx.deliveredAmount, totals.billed, totals.cost, totals.totalPaid, totals.remaining
+                    ].join(' ').toLowerCase();
+                    if (!haystack.includes(search)) return false;
                 }
                 return true;
             }).sort((a, b) => {
@@ -1076,7 +1345,59 @@
             document.getElementById('kpiTotalBilled').innerText = money(totalBilled);
             document.getElementById('kpiTotalProfit').innerText = transactions.length.toLocaleString('en-US');
             document.getElementById('kpiTotalPending').innerText = money(totalPending);
+            renderPaymentAlerts();
             renderAdminFinance();
+        }
+
+        function renderPaymentAlerts() {
+            const panel = document.getElementById('paymentAlertsPanel');
+            const list = document.getElementById('paymentAlertsList');
+            const summary = document.getElementById('paymentAlertsSummary');
+            const badge = document.getElementById('paymentAlertsBadge');
+            if (!panel || !list || !summary || !badge) return;
+
+            const grouped = new Map();
+            transactions.forEach(tx => {
+                const totals = calculateTotals(tx);
+                if (totals.remaining <= 0) return;
+                const name = tx.clientName || 'بدون اسم';
+                const current = grouped.get(name) || { name, count: 0, remaining: 0, lastDate: '' };
+                current.count += 1;
+                current.remaining += totals.remaining;
+                if (String(tx.date || '') > String(current.lastDate || '')) current.lastDate = tx.date || '';
+                grouped.set(name, current);
+            });
+
+            const alerts = Array.from(grouped.values()).sort((a, b) => b.remaining - a.remaining);
+            if (!alerts.length) {
+                badge.classList.add('hidden');
+                badge.innerText = '0';
+                list.innerHTML = '<p class="text-center text-xs font-bold text-slate-500 py-6">لا توجد دفعات تحتاج متابعة الآن</p>';
+                summary.innerText = 'لا توجد مبالغ متبقية';
+                return;
+            }
+
+            const totalRemaining = alerts.reduce((sum, item) => sum + item.remaining, 0);
+            badge.classList.remove('hidden');
+            badge.innerText = alerts.length > 99 ? '99+' : alerts.length.toLocaleString('en-US');
+            summary.innerText = `${alerts.length.toLocaleString('en-US')} زبون • ${formatMoney(totalRemaining)} • الجمعة ${getNextFridayText()}`;
+            list.innerHTML = alerts.slice(0, 6).map(item => `
+                <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-black text-slate-900">${escapeHtml(item.name)}</p>
+                            <p class="text-xs font-bold text-slate-500 mt-1">${item.count.toLocaleString('en-US')} حوالة غير مكتملة${item.lastDate ? ` • آخر تاريخ ${escapeHtml(item.lastDate)}` : ''}</p>
+                        </div>
+                        <p class="amount-cell text-sm font-black text-rose-700">${formatMoney(item.remaining)}</p>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between gap-2">
+                        <p class="text-[11px] font-black text-rose-700">تذكير كل جمعة</p>
+                        <button onclick="openCustomerModalByName('${escapeJs(item.name)}')" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-black">
+                            فتح صفحة الزبون
+                        </button>
+                    </div>
+                </div>
+            `).join('') + (alerts.length > 6 ? `<p class="text-center text-xs font-bold text-slate-500 pt-1">+ ${alerts.length - 6} زبائن آخرين</p>` : '');
         }
 
         function renderViews() {
@@ -1129,6 +1450,9 @@
                     </td>
                     <td class="py-4 px-4 text-left">
                         <div class="flex items-center gap-1">
+                            <button onclick="openCustomerModalByName('${escapeJs(tx.clientName)}')" class="p-2 text-slate-600 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition" title="صفحة الزبون">
+                                <i data-lucide="user-round-search" class="w-4 h-4"></i>
+                            </button>
                             <button onclick="openReceiptModal('${tx.id}')" class="p-2 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition" title="إصدار فاتورة/إيصال">
                                 <i data-lucide="receipt" class="w-4 h-4"></i>
                             </button>
@@ -1184,6 +1508,9 @@
                             ${isExpanded ? 'إخفاء' : 'عرض التفاصيل'}
                         </button>
                         <div class="flex items-center gap-1">
+                            <button onclick="openCustomerModalByName('${escapeJs(tx.clientName)}')" class="p-2 text-slate-700 bg-slate-100 hover:bg-violet-100 rounded-lg transition">
+                                <i data-lucide="user-round-search" class="w-4 h-4"></i>
+                            </button>
                             <button onclick="openReceiptModal('${tx.id}')" class="p-2 text-slate-700 bg-slate-100 hover:bg-blue-100 rounded-lg transition">
                                 <i data-lucide="receipt" class="w-4 h-4"></i>
                             </button>
@@ -1220,6 +1547,92 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">${installmentsHtml}</div>
                 </div>
             `;
+        }
+
+        function openCustomerModalByName(name) {
+            if (!name || name === 'ALL') {
+                showToast('اختر زبون أولاً', true);
+                return;
+            }
+            const list = transactions.filter(tx => tx.clientName === name);
+            if (!list.length) {
+                showToast('لا توجد حوالات لهذا الزبون', true);
+                return;
+            }
+            let billed = 0, paid = 0, remaining = 0;
+            const deliveredByCurrency = {};
+            list.forEach(tx => {
+                const totals = calculateTotals(tx);
+                billed += totals.billed;
+                paid += totals.totalPaid;
+                remaining += totals.remaining;
+                deliveredByCurrency[tx.currency || ''] = (deliveredByCurrency[tx.currency || ''] || 0) + (Number(tx.deliveredAmount) || 0);
+            });
+            const delivered = Object.entries(deliveredByCurrency)
+                .map(([currency, value]) => formatMoney(value, formatCurrencySymbol(currency), 0))
+                .join(' / ');
+            document.getElementById('customerModalTitle').innerText = `صفحة الزبون: ${name}`;
+            document.getElementById('customerContent').innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div class="bg-blue-50 border-2 border-blue-100 rounded-2xl p-4"><p class="text-xs font-black text-blue-700">عدد الحوالات</p><p class="text-xl font-black text-slate-900">${list.length}</p></div>
+                    <div class="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-4"><p class="text-xs font-black text-emerald-700">المسلم</p><p class="text-lg font-black text-slate-900 amount-cell">${delivered || '0'}</p></div>
+                    <div class="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4"><p class="text-xs font-black text-indigo-700">المطلوب</p><p class="text-xl font-black text-slate-900">${formatMoney(billed)}</p></div>
+                    <div class="bg-amber-50 border-2 border-amber-100 rounded-2xl p-4"><p class="text-xs font-black text-amber-700">المتبقي</p><p class="text-xl font-black text-amber-700">${formatMoney(remaining)}</p></div>
+                </div>
+                <div class="space-y-2">
+                    ${list.map(tx => {
+                        const totals = calculateTotals(tx);
+                        return `
+                            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">${tx.date} - ${escapeHtml(tx.partnerName || 'بدون وسيط')}</p>
+                                    <p class="text-xs font-bold text-slate-500">${escapeHtml(tx.notes || 'بدون ملاحظات')}</p>
+                                </div>
+                                <div class="text-xs font-black text-left">
+                                    <p>المطلوب: ${formatMoney(totals.billed)}</p>
+                                    <p class="${totals.remaining > 0 ? 'text-amber-700' : 'text-emerald-700'}">المتبقي: ${formatMoney(totals.remaining)}</p>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            document.getElementById('customerModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function openReportModal() {
+            const list = getFilteredTransactions();
+            let billed = 0, paid = 0, remaining = 0;
+            list.forEach(tx => {
+                const totals = calculateTotals(tx);
+                billed += totals.billed;
+                paid += totals.totalPaid;
+                remaining += totals.remaining;
+            });
+            document.getElementById('reportContent').innerHTML = `
+                <div class="border-b-2 border-slate-200 pb-4">
+                    <h2 class="text-2xl font-black text-slate-900">تقرير الحوالات</h2>
+                    <p class="text-sm font-bold text-slate-500">تاريخ التقرير: ${new Date().toLocaleDateString('ar')}</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4"><p class="text-xs font-black text-slate-500">عدد السجلات</p><p class="text-xl font-black">${list.length}</p></div>
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4"><p class="text-xs font-black text-indigo-700">المطلوب</p><p class="text-xl font-black">${formatMoney(billed)}</p></div>
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4"><p class="text-xs font-black text-emerald-700">المقبوض</p><p class="text-xl font-black">${formatMoney(paid)}</p></div>
+                    <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4"><p class="text-xs font-black text-amber-700">المتبقي</p><p class="text-xl font-black">${formatMoney(remaining)}</p></div>
+                </div>
+                <table class="w-full text-xs sm:text-sm border-collapse">
+                    <thead><tr class="bg-slate-900 text-white"><th class="p-2 text-right">التاريخ</th><th class="p-2 text-right">الزبون</th><th class="p-2 text-left">المطلوب</th><th class="p-2 text-left">المدفوع</th><th class="p-2 text-left">المتبقي</th></tr></thead>
+                    <tbody>
+                        ${list.map(tx => {
+                            const totals = calculateTotals(tx);
+                            return `<tr class="border-b border-slate-200"><td class="p-2">${tx.date}</td><td class="p-2">${escapeHtml(tx.clientName)}</td><td class="p-2 text-left">${formatMoney(totals.billed)}</td><td class="p-2 text-left">${formatMoney(totals.totalPaid)}</td><td class="p-2 text-left">${formatMoney(totals.remaining)}</td></tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('reportModal').classList.remove('hidden');
+            lucide.createIcons();
         }
 
         function toggleExpandRow(id) {
@@ -1338,15 +1751,46 @@
             }
 
             const data = { date, clientName, deliveredAmount, currency, partnerCostEur, billedEur, partnerName, notes, installments };
+            pendingReviewData = { editId, data };
+            showReviewModal(data, Boolean(editId));
+        }
+
+        function showReviewModal(data, isEdit) {
+            const totals = calculateTotals(data);
+            document.getElementById('reviewContent').innerHTML = `
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-500">العملية</p><p class="font-black">${isEdit ? 'تعديل حوالة' : 'حوالة جديدة'}</p></div>
+                    <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-500">التاريخ</p><p class="font-black">${data.date}</p></div>
+                    <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-500">الزبون</p><p class="font-black">${escapeHtml(data.clientName)}</p></div>
+                    <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-500">المسلم</p><p class="font-black amount-cell">${formatMoney(data.deliveredAmount, formatCurrencySymbol(data.currency), 0)}</p></div>
+                    <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-500">المطلوب</p><p class="font-black">${formatMoney(totals.billed)}</p></div>
+                    <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-500">المتبقي</p><p class="font-black text-amber-700">${formatMoney(totals.remaining)}</p></div>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-xs font-black text-emerald-800">راجع الأرقام قبل الحفظ. يمكنك الرجوع للتعديل أو تأكيد الحفظ مباشرة.</div>
+            `;
+            document.getElementById('reviewModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function confirmReviewSave() {
+            if (!pendingReviewData) return;
+            const { editId, data } = pendingReviewData;
+            document.getElementById('reviewModal').classList.add('hidden');
+            await performSaveTransaction(editId, data);
+            pendingReviewData = null;
+        }
+
+        async function performSaveTransaction(editId, data) {
             pushUndoSnapshot();
             isSubmitting = true;
             setBusy(true);
             try {
-                if (!contacts.some(c => c.name === clientName)) {
-                    await fb.addDoc(fb.collection(db, 'contacts'), { name: clientName, phone: '', createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email });
+                if (!contacts.some(c => c.name === data.clientName)) {
+                    await fb.addDoc(fb.collection(db, 'contacts'), { name: data.clientName, phone: '', createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email });
                 }
                 if (editId) await updateTransfer(editId, data);
                 else await addTransfer(data);
+                addActivity(editId ? 'update' : 'create', editId ? 'تعديل حوالة' : 'إضافة حوالة', `${data.clientName} - ${formatMoney(data.billedEur)}`);
                 closeModal();
                 showToast(editId ? 'تم تعديل السجل بنجاح' : 'تم الحفظ بنجاح');
             } catch (error) {
@@ -1371,12 +1815,82 @@
         }
 
         async function deleteTransaction(id) {
-            if (confirm('هل أنت تأكد من رغبتك في حذف المعاملة؟')) {
-                pushUndoSnapshot();
-                setBusy(true);
-                try { await deleteTransfer(id); showToast('تم حذف السجل بنجاح'); }
-                catch (error) { showToast('حدث خطأ أثناء الحذف', true); }
-                finally { setBusy(false); }
+            const tx = transactions.find(item => item.id === id);
+            if (!tx) return;
+            pendingDeleteId = id;
+            document.getElementById('deleteSummary').innerHTML = `
+                <p class="font-black text-slate-900">${escapeHtml(tx.clientName)}</p>
+                <p class="text-xs text-slate-500">${tx.date} - ${formatMoney(calculateTotals(tx).billed)}</p>
+                <p class="text-xs text-red-600 mt-2">هذا يمنع الحذف بالضغط بالغلط.</p>
+            `;
+            document.getElementById('deleteConfirmInput').value = '';
+            document.getElementById('confirmDeleteBtn').disabled = true;
+            document.getElementById('deleteModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function confirmDeleteTransaction() {
+            const tx = transactions.find(item => item.id === pendingDeleteId);
+            if (!tx) return;
+            document.getElementById('deleteModal').classList.add('hidden');
+            pushUndoSnapshot();
+            setBusy(true);
+            try {
+                const archived = { ...tx, originalId: tx.id, deletedAt: fb.serverTimestamp(), deletedBy: currentUser?.email || '' };
+                delete archived.id;
+                await fb.addDoc(fb.collection(db, 'deletedTransfers'), archived);
+                await deleteTransfer(pendingDeleteId);
+                addActivity('delete', 'حذف حوالة', `${tx.clientName} - ${formatMoney(calculateTotals(tx).billed)}`);
+                showToast('تم حذف السجل مع حفظ نسخة في الأرشيف');
+            }
+            catch (error) { showToast('حدث خطأ أثناء الحذف', true); }
+            finally {
+                pendingDeleteId = null;
+                setBusy(false);
+            }
+        }
+
+        function renderArchive() {
+            const list = document.getElementById('archiveList');
+            if (!list) return;
+            if (!deletedTransfers.length) {
+                list.innerHTML = '<p class="text-sm font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-2xl p-4">لا يوجد محذوفات مؤرشفة.</p>';
+                return;
+            }
+            list.innerHTML = deletedTransfers
+                .slice()
+                .sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0))
+                .map(tx => `
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-black text-slate-900">${escapeHtml(tx.clientName || 'بدون اسم')}</p>
+                            <p class="text-xs font-bold text-slate-500">${escapeHtml(tx.date || '')} • ${formatMoney(tx.deliveredAmount, formatCurrencySymbol(tx.currency), 0)}</p>
+                        </div>
+                        <button onclick="restoreDeletedTransfer('${escapeJs(tx.id)}')" class="px-3 py-2 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs">استرجاع</button>
+                    </div>
+                `).join('');
+            lucide.createIcons();
+        }
+
+        async function restoreDeletedTransfer(id) {
+            const tx = deletedTransfers.find(item => item.id === id);
+            if (!tx) return;
+            setBusy(true);
+            try {
+                const restored = { ...tx, restoredAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser?.email || '' };
+                delete restored.id;
+                delete restored.deletedAt;
+                delete restored.deletedBy;
+                delete restored.originalId;
+                await fb.addDoc(fb.collection(db, 'transfers'), restored);
+                await fb.deleteDoc(fb.doc(db, 'deletedTransfers', id));
+                addActivity('import', 'استرجاع من الأرشيف', `${tx.clientName} - ${formatMoney(calculateTotals(tx).billed)}`);
+                showToast('تم استرجاع المعاملة');
+            } catch (error) {
+                console.error(error);
+                showToast('حدث خطأ أثناء الاسترجاع', true);
+            } finally {
+                setBusy(false);
             }
         }
 
@@ -1430,12 +1944,9 @@
         }
 
         function exportToJson() {
-            const backup = { transactions, distributorPayments };
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
-            const a = document.createElement('a');
-            a.href = dataStr;
-            a.download = `نسخة_احتياطية_تحويلات_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
+            const backup = { createdAt: new Date().toISOString(), transactions, contacts, distributorPayments, deletedTransfers };
+            downloadTextFile(JSON.stringify(backup, null, 2), `نسخة_احتياطية_تحويلات_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+            addActivity('export', 'تصدير نسخة احتياطية', `${transactions.length} حوالة`);
         }
 
         function importJsonFile(e) {
@@ -1455,6 +1966,7 @@
                     }
                     pushUndoSnapshot();
                     await replaceAllTransfers(importedTransactions);
+                    addActivity('import', 'استيراد نسخة احتياطية', `${importedTransactions.length} حوالة`);
                     showToast('تم استيراد النسخة الاحتياطية بنجاح');
                 } catch (err) { showToast('خطأ في استيراد الملف', true); }
             };
@@ -1463,7 +1975,7 @@
 
         // --- Event Listeners Setup ---
         function setupEventListeners() {
-            document.getElementById('toggleProfitBtn').addEventListener('click', toggleProfitVisibility);
+            document.getElementById('toggleProfitBtn')?.addEventListener('click', toggleProfitVisibility);
             document.getElementById('openNewModalBtn').addEventListener('click', openNewModal);
             document.getElementById('closeModalBtn').addEventListener('click', closeModal);
             document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
@@ -1479,10 +1991,27 @@
             document.getElementById('closeCalcBtn').onclick = () => document.getElementById('calcModal').classList.add('hidden');
 
             document.getElementById('openContactsBtn').onclick = () => document.getElementById('contactsModal').classList.remove('hidden');
+            document.getElementById('openActivityBtn').onclick = openActivityModal;
+            document.getElementById('closeActivityBtn').onclick = () => document.getElementById('activityModal').classList.add('hidden');
+            document.getElementById('openReportBtn').onclick = openReportModal;
+            document.getElementById('closeReportBtn').onclick = () => document.getElementById('reportModal').classList.add('hidden');
+            document.getElementById('printReportBtn').onclick = () => window.print();
+            document.getElementById('openArchiveBtn').onclick = () => { renderArchive(); document.getElementById('archiveModal').classList.remove('hidden'); };
+            document.getElementById('closeArchiveBtn').onclick = () => document.getElementById('archiveModal').classList.add('hidden');
+            document.getElementById('closeCustomerBtn').onclick = () => document.getElementById('customerModal').classList.add('hidden');
             document.getElementById('openAdminBtn').onclick = openAdminModal;
             document.getElementById('closeAdminBtn').onclick = closeAdminModal;
             document.getElementById('adminDistributorPaymentForm').addEventListener('submit', addDistributorPayment);
             document.getElementById('closeContactsBtn').onclick = () => document.getElementById('contactsModal').classList.add('hidden');
+            document.getElementById('cancelReviewBtn').onclick = () => document.getElementById('reviewModal').classList.add('hidden');
+            document.getElementById('backToEditBtn').onclick = () => document.getElementById('reviewModal').classList.add('hidden');
+            document.getElementById('confirmReviewSaveBtn').onclick = confirmReviewSave;
+            document.getElementById('cancelDeleteBtn').onclick = () => document.getElementById('deleteModal').classList.add('hidden');
+            document.getElementById('closeDeleteBtn').onclick = () => document.getElementById('deleteModal').classList.add('hidden');
+            document.getElementById('confirmDeleteBtn').onclick = confirmDeleteTransaction;
+            document.getElementById('deleteConfirmInput').addEventListener('input', e => {
+                document.getElementById('confirmDeleteBtn').disabled = e.target.value.trim() !== 'حذف';
+            });
 
             document.getElementById('closeReceiptBtn').onclick = () => document.getElementById('receiptModal').classList.add('hidden');
 
@@ -1530,6 +2059,18 @@
             document.getElementById('searchInput').addEventListener('input', render);
             document.getElementById('statusFilter').addEventListener('change', render);
             document.getElementById('sortBySelect').addEventListener('change', render);
+            document.getElementById('paymentAlertsBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('paymentAlertsPanel').classList.toggle('hidden');
+            });
+            document.getElementById('paymentAlertsPanel').addEventListener('click', e => e.stopPropagation());
+            document.addEventListener('click', () => document.getElementById('paymentAlertsPanel').classList.add('hidden'));
+            document.getElementById('pendingOnlyBtn').onclick = () => {
+                document.getElementById('statusFilter').value = 'PENDING';
+                document.getElementById('sortBySelect').value = 'BALANCE_DESC';
+                document.getElementById('paymentAlertsPanel').classList.add('hidden');
+                render();
+            };
 
             const menuBtn = document.getElementById('openBackupMenuBtn');
             const menu = document.getElementById('backupMenu');
@@ -1539,19 +2080,8 @@
             document.getElementById('exportCsvFullBtn').onclick = () => exportToCsv(true);
             document.getElementById('exportCsvCleanBtn').onclick = () => exportToCsv(false);
             document.getElementById('exportJsonBtn').onclick = exportToJson;
+            document.getElementById('downloadAutoBackupBtn').onclick = downloadAutoBackup;
             document.getElementById('importFileInput').onchange = importJsonFile;
-            document.getElementById('clearDataBtn').onclick = async () => {
-                if (confirm('هل ترغب بإعادة التعيين إلى البيانات الافتراضية؟')) {
-                    pushUndoSnapshot();
-                    setBusy(true);
-                    try {
-                        await replaceAllTransfers(INITIAL_DEMO_DATA);
-                        await Promise.all(distributorPayments.map(item => fb.deleteDoc(fb.doc(db, 'distributorPayments', item.id))));
-                        showToast('تمت استعادة البيانات الافتراضية');
-                    } catch (error) { showToast('حدث خطأ أثناء إعادة التعيين', true); }
-                    finally { setBusy(false); }
-                }
-            };
         }
 
         async function migrateLocalStorageToFirestore() {
@@ -1627,6 +2157,11 @@
             if (!text) return '';
             return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
+
+        function escapeJs(text) {
+            return String(text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' ');
+        }
     </script>
 </body>
+
 </html>
