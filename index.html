@@ -313,8 +313,8 @@
                 <div class="bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wider text-slate-500">إجمالي المبالغ المسلّمة</p>
-                        <h2 id="kpiTotalDelivered" class="text-xl sm:text-2xl font-black text-slate-900 mt-1">مُتعدد العملات</h2>
-                        <p class="text-xs font-semibold text-slate-500 mt-0.5">المبالغ المحوّلة للزبائن</p>
+                        <h2 id="kpiTotalDelivered" class="text-xl sm:text-2xl font-black text-slate-900 mt-1 amount-cell">0</h2>
+                        <p class="text-xs font-semibold text-slate-500 mt-0.5">إجمالي ما أرسلناه للزبائن</p>
                     </div>
                     <div class="p-3.5 bg-blue-100 text-blue-700 rounded-2xl font-black">
                         <i data-lucide="hand-coins" class="w-7 h-7"></i>
@@ -1058,13 +1058,21 @@
 
         function renderDashboardKPIs() {
             let totalBilled = 0, totalProfit = 0, totalPending = 0;
+            const deliveredByCurrency = {};
             transactions.forEach(tx => {
                 const { billed, remaining, profit } = calculateTotals(tx);
+                const currency = tx.currency || '';
                 totalBilled += billed;
                 totalProfit += profit;
                 totalPending += remaining;
+                deliveredByCurrency[currency] = (deliveredByCurrency[currency] || 0) + (Number(tx.deliveredAmount) || 0);
             });
             const money = value => formatMoney(value);
+            const deliveredTotal = Object.entries(deliveredByCurrency)
+                .filter(([, value]) => Math.abs(value) > 0)
+                .map(([currency, value]) => formatMoney(value, formatCurrencySymbol(currency), 0))
+                .join(' / ') || '0';
+            document.getElementById('kpiTotalDelivered').innerText = deliveredTotal;
             document.getElementById('kpiTotalBilled').innerText = money(totalBilled);
             document.getElementById('kpiTotalProfit').innerText = money(totalProfit);
             document.getElementById('kpiTotalPending').innerText = money(totalPending);
