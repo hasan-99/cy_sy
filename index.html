@@ -162,24 +162,35 @@
 </head>
 <body class="h-full text-slate-900 antialiased bg-slate-100 flex flex-col font-sans">
 
-    <!-- PIN Screen Overlay -->
-    <div id="pinOverlay" class="fixed inset-0 z-50 bg-slate-900 hidden items-center justify-center p-4" aria-hidden="true">
+    <!-- Firebase Authentication Screen -->
+    <div id="loginOverlay" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4" aria-hidden="false">
         <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl space-y-6">
             <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
                 <i data-lucide="lock" class="w-8 h-8"></i>
             </div>
             <div>
-                <h2 class="text-xl font-black text-slate-900">حماية دفتر الحسابات</h2>
-                <p class="text-xs font-bold text-slate-500 mt-1">أدخل رمز الـ PIN المكون من 4 أرقام للدخول</p>
+                <h2 class="text-xl font-black text-slate-900">تسجيل الدخول</h2>
+                <p class="text-xs font-bold text-slate-500 mt-1">سجّل الدخول للوصول إلى دفتر التحويلات المتزامن</p>
             </div>
-            <input type="password" id="pinInput" maxlength="4" placeholder="••••" class="w-full text-center text-3xl font-black tracking-widest py-3 border-2 border-slate-300 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
-            <button id="unlockBtn" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl shadow-md transition">فتح النظام</button>
-            <p id="pinError" class="text-xs font-bold text-red-600 hidden">رمز PIN غير صحيح!</p>
+            <form id="loginForm" class="space-y-3 text-right">
+                <label class="block text-xs font-black text-slate-700">البريد الإلكتروني</label>
+                <input type="email" id="loginEmail" autocomplete="email" required class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-emerald-500" dir="ltr">
+                <label class="block text-xs font-black text-slate-700">كلمة المرور</label>
+                <input type="password" id="loginPassword" autocomplete="current-password" required class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-emerald-500" dir="ltr">
+                <button id="loginBtn" type="submit" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl shadow-md transition disabled:opacity-50">دخول</button>
+            </form>
+            <p id="authLoading" class="text-xs font-bold text-slate-500">جاري التحقق من تسجيل الدخول...</p>
+            <p id="loginError" class="text-xs font-bold text-red-600 hidden"></p>
         </div>
     </div>
 
+    <div id="globalLoading" class="fixed inset-0 z-[60] bg-slate-950/60 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl px-6 py-4 shadow-2xl font-black text-slate-800">جاري التنفيذ...</div>
+    </div>
+    <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] hidden rounded-xl px-5 py-3 text-sm font-black text-white shadow-2xl"></div>
+
     <!-- Main Application Container -->
-    <div id="appContainer" class="flex-1 flex flex-col h-full">
+    <div id="appContainer" class="hidden flex-1 flex-col h-full">
         <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-lg border-b border-slate-800">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="app-header-inner">
@@ -247,8 +258,11 @@
                                 <i data-lucide="more-vertical" class="w-5 h-5"></i>
                             </button>
                             <div id="backupMenu" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 text-slate-800 z-50 text-xs sm:text-sm font-bold">
-                                <button id="setPinBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
-                                    <i data-lucide="key" class="w-4 h-4 text-indigo-600"></i> تغيير رمز PIN للحماية
+                                <button id="migrateDataBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="database-backup" class="w-4 h-4 text-indigo-600"></i> استيراد بيانات المتصفح القديمة
+                                </button>
+                                <button id="logoutBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2 text-red-600">
+                                    <i data-lucide="log-out" class="w-4 h-4"></i> تسجيل الخروج
                                 </button>
                                 <button id="exportCsvFullBtn" class="w-full text-right px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">
                                     <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> تصدير أكسل (شامل الأرباح)
@@ -627,26 +641,21 @@
     </div>
 
     <script>
-        // Embedded previews may block localStorage. Fall back to memory so the
-        // interface remains fully usable during review.
-        const memoryStorage = new Map();
-        const safeStorage = {
-            getItem(key) {
-                try { return window.localStorage.getItem(key); }
-                catch (error) { return memoryStorage.has(key) ? memoryStorage.get(key) : null; }
-            },
-            setItem(key, value) {
-                const normalizedValue = String(value);
-                memoryStorage.set(key, normalizedValue);
-                try { window.localStorage.setItem(key, normalizedValue); } catch (error) {}
-            }
+        // Firebase Web configuration (public client configuration, not a private key).
+        const firebaseConfig = {
+            apiKey: "AIzaSyCr4puBMnL2USmC1DPNGcLgQNrpI2R_taE",
+            authDomain: "cysy-23b8a.firebaseapp.com",
+            projectId: "cysy-23b8a",
+            storageBucket: "cysy-23b8a.firebasestorage.app",
+            messagingSenderId: "32285383271",
+            appId: "1:32285383271:web:90e9324354734206d092c2"
         };
 
         const STORAGE_KEY = 'money_transfer_ledger_v4';
-        const PRIVACY_KEY = 'money_transfer_privacy_show_profit';
-        const PIN_KEY = 'money_transfer_app_pin';
         const CONTACTS_KEY = 'money_transfer_contacts';
         const DISTRIBUTOR_PAYMENTS_KEY = 'money_transfer_distributor_payments_v1';
+        const MIGRATION_KEY = 'firebaseMigrationCompleted';
+        const FIREBASE_SDK_VERSION = '12.3.0';
 
         let transactions = [];
         let contacts = [];
@@ -655,9 +664,14 @@
         let redoStack = [];
         let expandedRows = new Set();
         let showProfit = true;
-        let activePin = safeStorage.getItem(PIN_KEY) || "1234";
-        let inactivityTimer = null;
-        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000;
+        let currentUser = null;
+        let auth = null;
+        let db = null;
+        let fb = {};
+        let unsubscribeTransfers = null;
+        let unsubscribeContacts = null;
+        let unsubscribePayments = null;
+        let isSubmitting = false;
 
         const INITIAL_DEMO_DATA = [
             {
@@ -674,84 +688,84 @@
             }
         ];
 
-        window.onload = function() {
+        window.onload = async function() {
             lucide.createIcons();
-            setupPinAuth();
-            setupInactivityWatch();
-            loadPrivacySetting();
-            loadContacts();
-            loadDistributorPayments();
-            loadFromStorage();
             setupEventListeners();
             render();
+            await initializeFirebase();
         };
 
-        // --- Auth & PIN Engine ---
-        function setupPinAuth() {
-            const overlay = document.getElementById('pinOverlay');
-            const app = document.getElementById('appContainer');
-            const unlockBtn = document.getElementById('unlockBtn');
-            const pinInput = document.getElementById('pinInput');
-            const pinError = document.getElementById('pinError');
-
-            lockApp();
-
-            const tryUnlock = () => {
-                if (pinInput.value === activePin) {
-                    overlay.style.display = 'none';
-                    overlay.setAttribute('aria-hidden', 'true');
-                    app.style.display = '';
-                    pinInput.value = '';
-                    pinError.classList.add('hidden');
-                    resetInactivityTimer();
-                } else {
-                    pinError.classList.remove('hidden');
-                }
-            };
-
-            unlockBtn.onclick = tryUnlock;
-            pinInput.onkeydown = (e) => {
-                if (e.key === 'Enter') tryUnlock();
-            };
+        async function initializeFirebase() {
+            try {
+                const [appModule, authModule, firestoreModule] = await Promise.all([
+                    import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`),
+                    import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-auth.js`),
+                    import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`)
+                ]);
+                fb = { ...authModule, ...firestoreModule };
+                const firebaseApp = appModule.initializeApp(firebaseConfig);
+                auth = authModule.getAuth(firebaseApp);
+                db = firestoreModule.getFirestore(firebaseApp);
+                await authModule.setPersistence(auth, authModule.browserLocalPersistence);
+                authModule.onAuthStateChanged(auth, async user => {
+                    document.getElementById('authLoading').classList.add('hidden');
+                    currentUser = user;
+                    if (user) {
+                        showApplication();
+                        subscribeToFirestore();
+                    } else {
+                        stopSubscriptions();
+                        showLogin();
+                    }
+                });
+            } catch (error) {
+                console.error('Firebase initialization failed', error);
+                showLoginError('حدث خطأ أثناء الاتصال بقاعدة البيانات');
+            }
         }
 
-        function lockApp() {
-            const overlay = document.getElementById('pinOverlay');
+        function showLogin() {
+            const overlay = document.getElementById('loginOverlay');
             const app = document.getElementById('appContainer');
-            const pinInput = document.getElementById('pinInput');
-            const pinError = document.getElementById('pinError');
-
+            overlay.classList.remove('hidden');
             overlay.style.display = 'flex';
             overlay.setAttribute('aria-hidden', 'false');
+            app.classList.add('hidden');
             app.style.display = 'none';
-            if (pinInput) pinInput.value = '';
-            if (pinError) pinError.classList.add('hidden');
-            if (inactivityTimer) clearTimeout(inactivityTimer);
         }
 
-        // --- Auto-logout after 5 minutes of inactivity ---
-        function resetInactivityTimer() {
-            if (document.getElementById('appContainer').style.display === 'none') return;
-            if (inactivityTimer) clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(lockApp, INACTIVITY_LIMIT_MS);
+        function showApplication() {
+            const overlay = document.getElementById('loginOverlay');
+            const app = document.getElementById('appContainer');
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
+            overlay.setAttribute('aria-hidden', 'true');
+            app.classList.remove('hidden');
+            app.style.display = 'flex';
         }
 
-        function setupInactivityWatch() {
-            ['click', 'keydown', 'mousemove', 'touchstart', 'scroll'].forEach((evt) => {
-                document.addEventListener(evt, resetInactivityTimer, { passive: true });
-            });
+        async function loginUser(email, password) {
+            setBusy(true, 'loginBtn');
+            try {
+                await fb.signInWithEmailAndPassword(auth, email, password);
+                document.getElementById('loginPassword').value = '';
+            } catch (error) {
+                console.error('Login failed', error.code);
+                showLoginError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+            } finally {
+                setBusy(false, 'loginBtn');
+            }
         }
 
-        // --- Privacy & Data Management ---
-        function loadPrivacySetting() {
-            const saved = safeStorage.getItem(PRIVACY_KEY);
-            showProfit = saved !== null ? saved === 'true' : true;
-            updatePrivacyUI();
+        async function logoutUser() {
+            setBusy(true);
+            try { await fb.signOut(auth); showToast('تم تسجيل الخروج بنجاح'); }
+            catch (error) { showToast('حدث خطأ أثناء تسجيل الخروج', true); }
+            finally { setBusy(false); }
         }
 
         function toggleProfitVisibility() {
             showProfit = !showProfit;
-            safeStorage.setItem(PRIVACY_KEY, showProfit);
             updatePrivacyUI();
             render();
         }
@@ -771,54 +785,76 @@
             lucide.createIcons();
         }
 
-        function loadFromStorage() {
-            const saved = safeStorage.getItem(STORAGE_KEY);
-            try { transactions = saved ? JSON.parse(saved) : [...INITIAL_DEMO_DATA]; }
-            catch (e) { transactions = [...INITIAL_DEMO_DATA]; }
+        function normalizeFirestoreDoc(snapshot) {
+            const data = snapshot.data();
+            for (const key of ['createdAt', 'updatedAt']) {
+                if (data[key] && typeof data[key].toMillis === 'function') data[key] = data[key].toMillis();
+            }
+            return { ...data, id: snapshot.id };
         }
 
-        function saveStateToStorage(pushToUndo = true) {
-            if (pushToUndo) {
-                undoStack.push(JSON.stringify(transactions));
-                redoStack = [];
-            }
-            safeStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+        function subscribeToFirestore() {
+            stopSubscriptions();
+            setBusy(true);
+            unsubscribeTransfers = fb.onSnapshot(fb.collection(db, 'transfers'), snapshot => {
+                transactions = snapshot.docs.map(normalizeFirestoreDoc);
+                transactions.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || (b.createdAt || 0) - (a.createdAt || 0));
+                render();
+                setBusy(false);
+            }, handleFirestoreError);
+            unsubscribeContacts = fb.onSnapshot(fb.collection(db, 'contacts'), snapshot => {
+                contacts = snapshot.docs.map(normalizeFirestoreDoc).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar'));
+                renderContacts();
+            }, handleFirestoreError);
+            unsubscribePayments = fb.onSnapshot(fb.collection(db, 'distributorPayments'), snapshot => {
+                distributorPayments = snapshot.docs.map(normalizeFirestoreDoc);
+                renderAdminFinance();
+                renderDashboardKPIs();
+            }, handleFirestoreError);
+        }
+
+        function stopSubscriptions() {
+            [unsubscribeTransfers, unsubscribeContacts, unsubscribePayments].forEach(fn => { if (fn) fn(); });
+            unsubscribeTransfers = unsubscribeContacts = unsubscribePayments = null;
+        }
+
+        function pushUndoSnapshot() {
+            undoStack.push(JSON.stringify(transactions));
+            redoStack = [];
             updateUndoRedoButtons();
         }
 
-        function undo() {
+        async function replaceAllTransfers(nextTransactions) {
+            const currentIds = new Set(transactions.map(item => item.id));
+            const nextIds = new Set(nextTransactions.map(item => item.id));
+            const writes = [];
+            currentIds.forEach(id => { if (!nextIds.has(id)) writes.push(fb.deleteDoc(fb.doc(db, 'transfers', id))); });
+            nextTransactions.forEach(item => {
+                const { id, ...data } = item;
+                writes.push(fb.setDoc(fb.doc(db, 'transfers', id || crypto.randomUUID()), { ...data, updatedAt: fb.serverTimestamp(), createdBy: currentUser.email }, { merge: true }));
+            });
+            await Promise.all(writes);
+        }
+
+        async function undo() {
             if (!undoStack.length) return;
             redoStack.push(JSON.stringify(transactions));
-            transactions = JSON.parse(undoStack.pop());
-            safeStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            const previous = JSON.parse(undoStack.pop());
+            await replaceAllTransfers(previous);
             updateUndoRedoButtons();
-            render();
         }
 
-        function redo() {
+        async function redo() {
             if (!redoStack.length) return;
             undoStack.push(JSON.stringify(transactions));
-            transactions = JSON.parse(redoStack.pop());
-            safeStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            const next = JSON.parse(redoStack.pop());
+            await replaceAllTransfers(next);
             updateUndoRedoButtons();
-            render();
         }
 
         function updateUndoRedoButtons() {
             document.getElementById('undoBtn').disabled = !undoStack.length;
             document.getElementById('redoBtn').disabled = !redoStack.length;
-        }
-
-        // --- Contacts Management ---
-        function loadContacts() {
-            const saved = safeStorage.getItem(CONTACTS_KEY);
-            contacts = saved ? JSON.parse(saved) : [{ name: 'حسن الجاهوش', phone: '003579000000' }];
-            renderContacts();
-        }
-
-        function saveContacts() {
-            safeStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
-            renderContacts();
         }
 
         function renderContacts() {
@@ -846,20 +882,11 @@
             lucide.createIcons();
         }
 
-        function removeContact(idx) {
-            contacts.splice(idx, 1);
-            saveContacts();
-        }
-
-
-        function loadDistributorPayments() {
-            const saved = safeStorage.getItem(DISTRIBUTOR_PAYMENTS_KEY);
-            try { distributorPayments = saved ? JSON.parse(saved) : []; }
-            catch (e) { distributorPayments = []; }
-        }
-
-        function saveDistributorPayments() {
-            safeStorage.setItem(DISTRIBUTOR_PAYMENTS_KEY, JSON.stringify(distributorPayments));
+        async function removeContact(idx) {
+            const contact = contacts[idx];
+            if (!contact) return;
+            try { await fb.deleteDoc(fb.doc(db, 'contacts', contact.id)); showToast('تم حذف جهة الاتصال بنجاح'); }
+            catch (error) { showToast('حدث خطأ أثناء حذف جهة الاتصال', true); }
         }
 
         function getDistributorPaidTotal() {
@@ -912,27 +939,27 @@
             lucide.createIcons();
         }
 
-        function addDistributorPayment(e) {
+        async function addDistributorPayment(e) {
             e.preventDefault();
             const amountInput = document.getElementById('adminDistributorAmount');
             const dateInput = document.getElementById('adminDistributorDate');
             const amount = Number(amountInput.value) || 0;
             const date = dateInput.value;
             if (amount <= 0 || !date) return;
-            distributorPayments.push({ id: 'dist-' + Date.now(), amount, date, createdAt: Date.now() });
-            saveDistributorPayments();
-            amountInput.value = '';
-            renderAdminFinance();
-            renderDashboardKPIs();
-            amountInput.focus();
+            setBusy(true);
+            try {
+                await fb.addDoc(fb.collection(db, 'distributorPayments'), { amount, date, createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email });
+                amountInput.value = '';
+                amountInput.focus();
+                showToast('تم حفظ دفعة الموزّع بنجاح');
+            } catch (error) { showToast('حدث خطأ أثناء الحفظ', true); }
+            finally { setBusy(false); }
         }
 
-        function deleteDistributorPayment(id) {
+        async function deleteDistributorPayment(id) {
             if (!confirm('هل تريد حذف هذا التسليم للموزّع؟')) return;
-            distributorPayments = distributorPayments.filter(item => item.id !== id);
-            saveDistributorPayments();
-            renderAdminFinance();
-            renderDashboardKPIs();
+            try { await fb.deleteDoc(fb.doc(db, 'distributorPayments', id)); showToast('تم حذف الدفعة بنجاح'); }
+            catch (error) { showToast('حدث خطأ أثناء الحذف', true); }
         }
 
         function openAdminModal() {
@@ -1241,8 +1268,9 @@
             document.getElementById('formRemainingPreview').innerText = '€' + Math.max(0, billed - totalPaid).toFixed(2);
         }
 
-        function saveTransaction(e) {
+        async function saveTransaction(e) {
             e.preventDefault();
+            if (isSubmitting) return;
             const editId = document.getElementById('editTxId').value;
             const date = document.getElementById('txDate').value;
             const clientName = document.getElementById('txClient').value.trim();
@@ -1265,29 +1293,51 @@
             });
 
 
-            // Save contact automatically if missing
-            if (!contacts.some(c => c.name === clientName)) {
-                contacts.push({ name: clientName });
-                saveContacts();
+            if (!clientName || !date || deliveredAmount <= 0) {
+                showToast('يرجى تعبئة الحقول المطلوبة بشكل صحيح', true);
+                return;
             }
 
-            if (editId) {
-                const index = transactions.findIndex(t => t.id === editId);
-                if (index !== -1) transactions[index] = { ...transactions[index], date, clientName, deliveredAmount, currency, partnerCostEur, billedEur, partnerName, notes, installments };
-            } else {
-                transactions.unshift({ id: 'tx-' + Date.now(), date, clientName, deliveredAmount, currency, partnerCostEur, billedEur, partnerName, notes, installments });
+            const data = { date, clientName, deliveredAmount, currency, partnerCostEur, billedEur, partnerName, notes, installments };
+            pushUndoSnapshot();
+            isSubmitting = true;
+            setBusy(true);
+            try {
+                if (!contacts.some(c => c.name === clientName)) {
+                    await fb.addDoc(fb.collection(db, 'contacts'), { name: clientName, phone: '', createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email });
+                }
+                if (editId) await updateTransfer(editId, data);
+                else await addTransfer(data);
+                closeModal();
+                showToast(editId ? 'تم تعديل السجل بنجاح' : 'تم الحفظ بنجاح');
+            } catch (error) {
+                console.error('Save failed', error);
+                showToast('حدث خطأ أثناء الحفظ', true);
+            } finally {
+                isSubmitting = false;
+                setBusy(false);
             }
-
-            saveStateToStorage(true);
-            closeModal();
-            render();
         }
 
-        function deleteTransaction(id) {
+        async function addTransfer(data) {
+            return fb.addDoc(fb.collection(db, 'transfers'), { ...data, createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email });
+        }
+
+        async function updateTransfer(id, data) {
+            return fb.updateDoc(fb.doc(db, 'transfers', id), { ...data, updatedAt: fb.serverTimestamp() });
+        }
+
+        async function deleteTransfer(id) {
+            return fb.deleteDoc(fb.doc(db, 'transfers', id));
+        }
+
+        async function deleteTransaction(id) {
             if (confirm('هل أنت تأكد من رغبتك في حذف المعاملة؟')) {
-                transactions = transactions.filter(t => t.id !== id);
-                saveStateToStorage(true);
-                render();
+                pushUndoSnapshot();
+                setBusy(true);
+                try { await deleteTransfer(id); showToast('تم حذف السجل بنجاح'); }
+                catch (error) { showToast('حدث خطأ أثناء الحذف', true); }
+                finally { setBusy(false); }
             }
         }
 
@@ -1353,22 +1403,21 @@
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = async function(event) {
                 try {
                     const imported = JSON.parse(event.target.result);
+                    let importedTransactions = [];
                     if (Array.isArray(imported)) {
-                        transactions = imported;
+                        importedTransactions = imported;
                     } else if (imported && Array.isArray(imported.transactions)) {
-                        transactions = imported.transactions;
-                        distributorPayments = Array.isArray(imported.distributorPayments) ? imported.distributorPayments : [];
-                        saveDistributorPayments();
+                        importedTransactions = imported.transactions;
                     } else {
                         throw new Error('Invalid backup');
                     }
-                    saveStateToStorage(true);
-                    render();
-                    alert('تم استيراد النسخة الاحتياطية بنجاح!');
-                } catch (err) { alert('خطأ في استيراد الملف!'); }
+                    pushUndoSnapshot();
+                    await replaceAllTransfers(importedTransactions);
+                    showToast('تم استيراد النسخة الاحتياطية بنجاح');
+                } catch (err) { showToast('خطأ في استيراد الملف', true); }
             };
             reader.readAsText(file);
         }
@@ -1380,6 +1429,12 @@
             document.getElementById('closeModalBtn').addEventListener('click', closeModal);
             document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
             document.getElementById('transactionForm').addEventListener('submit', saveTransaction);
+            document.getElementById('loginForm').addEventListener('submit', e => {
+                e.preventDefault();
+                loginUser(document.getElementById('loginEmail').value.trim(), document.getElementById('loginPassword').value);
+            });
+            document.getElementById('logoutBtn').addEventListener('click', logoutUser);
+            document.getElementById('migrateDataBtn').addEventListener('click', migrateLocalStorageToFirestore);
 
             document.getElementById('openCalcBtn').onclick = () => document.getElementById('calcModal').classList.remove('hidden');
             document.getElementById('closeCalcBtn').onclick = () => document.getElementById('calcModal').classList.add('hidden');
@@ -1408,27 +1463,17 @@
             ['calcAmount', 'calcRate', 'calcMargin'].forEach(id => document.getElementById(id).oninput = updateCalc);
 
             // Add Contact Form
-            document.getElementById('addContactForm').onsubmit = (e) => {
+            document.getElementById('addContactForm').onsubmit = async (e) => {
                 e.preventDefault();
                 const name = document.getElementById('contactNameInput').value.trim();
                 const phone = document.getElementById('contactPhoneInput').value.trim();
                 if (name) {
-                    contacts.push({ name, phone });
-                    saveContacts();
-                    document.getElementById('contactNameInput').value = '';
-                    document.getElementById('contactPhoneInput').value = '';
-                }
-            };
-
-            // Set PIN
-            document.getElementById('setPinBtn').onclick = () => {
-                const newPin = prompt('أدخل رمز PIN الجديد المكون من 4 أرقام:', activePin);
-                if (newPin && newPin.length === 4) {
-                    activePin = newPin;
-                    safeStorage.setItem(PIN_KEY, activePin);
-                    alert('تم تغيير رمز PIN بنجاح!');
-                } else if (newPin) {
-                    alert('الرمز يجب أن يتكون من 4 أرقام!');
+                    try {
+                        await fb.addDoc(fb.collection(db, 'contacts'), { name, phone, createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email });
+                        document.getElementById('contactNameInput').value = '';
+                        document.getElementById('contactPhoneInput').value = '';
+                        showToast('تم حفظ جهة الاتصال بنجاح');
+                    } catch (error) { showToast('حدث خطأ أثناء حفظ جهة الاتصال', true); }
                 }
             };
 
@@ -1456,15 +1501,87 @@
             document.getElementById('exportCsvCleanBtn').onclick = () => exportToCsv(false);
             document.getElementById('exportJsonBtn').onclick = exportToJson;
             document.getElementById('importFileInput').onchange = importJsonFile;
-            document.getElementById('clearDataBtn').onclick = () => {
+            document.getElementById('clearDataBtn').onclick = async () => {
                 if (confirm('هل ترغب بإعادة التعيين إلى البيانات الافتراضية؟')) {
-                    transactions = [...INITIAL_DEMO_DATA];
-                    distributorPayments = [];
-                    saveDistributorPayments();
-                    saveStateToStorage(true);
-                    render();
+                    pushUndoSnapshot();
+                    setBusy(true);
+                    try {
+                        await replaceAllTransfers(INITIAL_DEMO_DATA);
+                        await Promise.all(distributorPayments.map(item => fb.deleteDoc(fb.doc(db, 'distributorPayments', item.id))));
+                        showToast('تمت استعادة البيانات الافتراضية');
+                    } catch (error) { showToast('حدث خطأ أثناء إعادة التعيين', true); }
+                    finally { setBusy(false); }
                 }
             };
+        }
+
+        async function migrateLocalStorageToFirestore() {
+            if (localStorage.getItem(MIGRATION_KEY) === 'true') {
+                showToast('تم استيراد بيانات المتصفح مسبقاً');
+                return;
+            }
+            let oldTransfers = [], oldContacts = [], oldPayments = [];
+            try {
+                oldTransfers = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                oldContacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
+                oldPayments = JSON.parse(localStorage.getItem(DISTRIBUTOR_PAYMENTS_KEY) || '[]');
+            } catch (error) {
+                showToast('تعذر قراءة بيانات المتصفح القديمة', true);
+                return;
+            }
+            const total = oldTransfers.length + oldContacts.length + oldPayments.length;
+            if (!total) { showToast('لا توجد بيانات قديمة للاستيراد'); return; }
+            if (!confirm(`تم العثور على ${total} سجل قديم. هل تريد استيرادها إلى Firebase؟`)) return;
+            setBusy(true);
+            try {
+                const writes = [];
+                oldTransfers.forEach(item => {
+                    const { id, ...data } = item;
+                    writes.push(fb.setDoc(fb.doc(db, 'transfers', id || crypto.randomUUID()), { ...data, createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email }, { merge: true }));
+                });
+                oldContacts.forEach(item => writes.push(fb.addDoc(fb.collection(db, 'contacts'), { ...item, createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email })));
+                oldPayments.forEach(item => {
+                    const { id, ...data } = item;
+                    writes.push(fb.setDoc(fb.doc(db, 'distributorPayments', id || crypto.randomUUID()), { ...data, createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp(), createdBy: currentUser.email }, { merge: true }));
+                });
+                await Promise.all(writes);
+                localStorage.setItem(MIGRATION_KEY, 'true');
+                showToast('تم استيراد البيانات القديمة بنجاح');
+            } catch (error) {
+                console.error('Migration failed', error);
+                showToast('حدث خطأ أثناء استيراد البيانات القديمة', true);
+            } finally { setBusy(false); }
+        }
+
+        function setBusy(active, buttonId) {
+            const loading = document.getElementById('globalLoading');
+            loading.classList.toggle('hidden', !active);
+            loading.style.display = active ? 'flex' : 'none';
+            if (buttonId) document.getElementById(buttonId).disabled = active;
+            document.querySelectorAll('button[type="submit"]').forEach(button => {
+                if (!buttonId || button.id !== buttonId) button.disabled = active;
+            });
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] rounded-xl px-5 py-3 text-sm font-black text-white shadow-2xl ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
+            toast.classList.remove('hidden');
+            clearTimeout(showToast.timer);
+            showToast.timer = setTimeout(() => toast.classList.add('hidden'), 3500);
+        }
+
+        function showLoginError(message) {
+            const error = document.getElementById('loginError');
+            error.textContent = message;
+            error.classList.remove('hidden');
+        }
+
+        function handleFirestoreError(error) {
+            console.error('Firestore error', error);
+            setBusy(false);
+            showToast(navigator.onLine ? 'حدث خطأ أثناء الاتصال بقاعدة البيانات' : 'لا يوجد اتصال بالإنترنت', true);
         }
 
         function escapeHtml(text) {
