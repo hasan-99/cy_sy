@@ -86,6 +86,23 @@
         .delivery-grid select { width: 100%; min-width: 0; height: 3.25rem; }
         #transactionModal input,
         #transactionModal select { min-width: 0; }
+        .amount-cell {
+            direction: ltr;
+            unicode-bidi: plaintext;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.35;
+            min-width: 0;
+        }
+        .amount-badge {
+            direction: ltr;
+            unicode-bidi: plaintext;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            max-width: 10rem;
+            display: inline-flex;
+            justify-content: center;
+        }
 
         @media (max-width: 1023px) {
             .app-header-inner { flex-direction: column; align-items: stretch; }
@@ -172,7 +189,7 @@
                 <h2 class="text-xl font-black text-slate-900">تسجيل الدخول</h2>
                 <p class="text-xs font-bold text-slate-500 mt-1">سجّل الدخول للوصول إلى دفتر التحويلات المتزامن</p>
             </div>
-            <form id="loginForm" class="space-y-3 text-right">
+            <form id="loginForm" class="space-y-3 text-right hidden">
                 <label class="block text-xs font-black text-slate-700">البريد الإلكتروني</label>
                 <input type="email" id="loginEmail" autocomplete="email" required class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-emerald-500" dir="ltr">
                 <label class="block text-xs font-black text-slate-700">كلمة المرور</label>
@@ -371,16 +388,15 @@
             <!-- Transactions Ledger View -->
             <div class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
                 <div class="hidden lg:block overflow-x-auto flex-1">
-                    <table class="w-full min-w-[1050px] text-right text-sm border-collapse">
+                    <table class="w-full min-w-[980px] text-right text-sm border-collapse">
                         <thead class="bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="py-4 px-3 w-10 text-center">تفاصيل</th>
                                 <th class="py-4 px-3">التاريخ</th>
                                 <th class="py-4 px-4">اسم الزبون</th>
-                                <th class="py-4 px-4 text-left">المبلغ المسلّم</th>
+                                <th class="py-4 px-4 text-left w-36">المبلغ المسلّم</th>
                                 <th class="py-4 px-4 text-left">التكلفة (€)</th>
                                 <th class="py-4 px-4 text-left">سعر الحوالة (€)</th>
-                                <th id="thProfitHeader" class="py-4 px-4 text-left">الربح (€)</th>
                                 <th class="py-4 px-4 text-left">المدفوع (€)</th>
                                 <th class="py-4 px-4 text-left">المتبقي (€)</th>
                                 <th class="py-4 px-4 text-center">الحالة</th>
@@ -706,7 +722,6 @@
                 db = firestoreModule.getFirestore(firebaseApp);
                 await authModule.setPersistence(auth, authModule.browserLocalPersistence);
                 authModule.onAuthStateChanged(auth, async user => {
-                    document.getElementById('authLoading').classList.add('hidden');
                     currentUser = user;
                     if (user) {
                         showApplication();
@@ -718,6 +733,7 @@
                 });
             } catch (error) {
                 console.error('Firebase initialization failed', error);
+                showLogin();
                 showLoginError('حدث خطأ أثناء الاتصال بقاعدة البيانات');
             }
         }
@@ -728,6 +744,8 @@
             overlay.classList.remove('hidden');
             overlay.style.display = 'flex';
             overlay.setAttribute('aria-hidden', 'false');
+            document.getElementById('authLoading').classList.add('hidden');
+            document.getElementById('loginForm').classList.remove('hidden');
             app.classList.add('hidden');
             app.style.display = 'none';
         }
@@ -735,6 +753,7 @@
         function showApplication() {
             const overlay = document.getElementById('loginOverlay');
             const app = document.getElementById('appContainer');
+            document.getElementById('loginForm').classList.add('hidden');
             overlay.classList.add('hidden');
             overlay.style.display = 'none';
             overlay.setAttribute('aria-hidden', 'true');
@@ -772,13 +791,13 @@
             const eyeIcon = document.getElementById('profitEyeIcon');
             const btnText = document.getElementById('profitBtnText');
             const kpiProfitCard = document.getElementById('kpiProfitCard');
-            const thProfitHeader = document.getElementById('thProfitHeader');
+
             const modalProfitPreviewSpan = document.getElementById('modalProfitPreviewSpan');
 
             if (eyeIcon) eyeIcon.setAttribute('data-lucide', showProfit ? 'eye-off' : 'eye');
             if (btnText) btnText.innerText = showProfit ? 'إخفاء الأرباح' : 'إظهار الأرباح';
             if (kpiProfitCard) kpiProfitCard.classList.toggle('hidden', !showProfit);
-            if (thProfitHeader) thProfitHeader.classList.toggle('hidden', !showProfit);
+
             if (modalProfitPreviewSpan) modalProfitPreviewSpan.classList.toggle('hidden', !showProfit);
             lucide.createIcons();
         }
@@ -989,6 +1008,21 @@
             return curr || '';
         }
 
+        function formatNumber(value, digits = 2) {
+            const number = Number(value) || 0;
+            return Math.abs(number).toLocaleString('en-US', {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            });
+        }
+
+        function formatMoney(value, symbol = '€', digits = 2) {
+            const number = Number(value) || 0;
+            const sign = number < 0 ? '-' : '';
+            if (symbol === '€' || symbol === '$') return `${sign}${symbol}${formatNumber(number, digits)}`;
+            return `${sign}${formatNumber(number, digits)}${symbol ? ` ${symbol}` : ''}`;
+        }
+
         function getFilteredTransactions() {
             const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
             const statusFilter = document.getElementById('statusFilter').value;
@@ -1030,7 +1064,7 @@
                 totalProfit += profit;
                 totalPending += remaining;
             });
-            const money = value => '€' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const money = value => formatMoney(value);
             document.getElementById('kpiTotalBilled').innerText = money(totalBilled);
             document.getElementById('kpiTotalProfit').innerText = money(totalProfit);
             document.getElementById('kpiTotalPending').innerText = money(totalPending);
@@ -1054,7 +1088,7 @@
             }
 
             list.forEach(tx => {
-                const { billed, cost, totalPaid, remaining, profit, isPaid, paidPercentage } = calculateTotals(tx);
+                const { billed, cost, totalPaid, remaining, isPaid, paidPercentage } = calculateTotals(tx);
                 const isExpanded = expandedRows.has(tx.id);
                 const currSymbol = formatCurrencySymbol(tx.currency);
 
@@ -1072,18 +1106,17 @@
                         <div>${escapeHtml(tx.clientName)}</div>
                         ${tx.partnerName ? `<span class="text-xs text-slate-500 font-bold">الوسيط: ${escapeHtml(tx.partnerName)}</span>` : ''}
                     </td>
-                    <td class="py-4 px-4 text-left font-black text-slate-900 text-base">
-                        ${(Number(tx.deliveredAmount) || 0).toLocaleString('en-US')} ${currSymbol}
+                    <td class="py-4 px-4 text-left font-black text-slate-900 text-base amount-cell">
+                        ${formatMoney(tx.deliveredAmount, currSymbol, 0)}
                     </td>
-                    <td class="py-4 px-4 text-left text-slate-600 font-bold">€${cost.toFixed(2)}</td>
-                    <td class="py-4 px-4 text-left font-black text-slate-900 text-base">€${billed.toFixed(2)}</td>
-                    ${showProfit ? `<td class="py-4 px-4 text-left font-black text-base ${profit > 0 ? 'text-emerald-700' : 'text-slate-500'}">€${profit.toFixed(2)}</td>` : ''}
-                    <td class="py-4 px-4 text-left text-slate-800">€${totalPaid.toFixed(2)}</td>
-                    <td class="py-4 px-4 text-left font-extrabold text-base ${remaining > 0 ? 'text-amber-600' : 'text-slate-400'}">€${remaining.toFixed(2)}</td>
+                    <td class="py-4 px-4 text-left text-slate-600 font-bold amount-cell">${formatMoney(cost)}</td>
+                    <td class="py-4 px-4 text-left font-black text-slate-900 text-base amount-cell">${formatMoney(billed)}</td>
+                    <td class="py-4 px-4 text-left text-slate-800 amount-cell">${formatMoney(totalPaid)}</td>
+                    <td class="py-4 px-4 text-left font-extrabold text-base amount-cell ${remaining > 0 ? 'text-amber-600' : 'text-slate-400'}">${formatMoney(remaining)}</td>
                     <td class="py-4 px-4 text-center">
                         ${isPaid 
                             ? `<span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">مكتمل</span>`
-                            : `<span class="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">متبقي €${remaining.toFixed(2)}</span>`
+                            : `<span class="amount-badge px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">متبقي ${formatMoney(remaining)}</span>`
                         }
                     </td>
                     <td class="py-4 px-4 text-left">
@@ -1105,7 +1138,7 @@
                 if (isExpanded) {
                     const expandedTr = document.createElement('tr');
                     expandedTr.className = 'bg-slate-100/80 border-b-2 border-slate-200';
-                    expandedTr.innerHTML = `<td colspan="${showProfit ? 11 : 10}" class="py-4 px-6">${renderInstallmentsDetailHtml(tx)}</td>`;
+                    expandedTr.innerHTML = `<td colspan="10" class="py-4 px-6">${renderInstallmentsDetailHtml(tx)}</td>`;
                     tbody.appendChild(expandedTr);
                 }
 
@@ -1121,7 +1154,7 @@
                         <div>
                             ${isPaid 
                                 ? `<span class="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">مكتمل</span>`
-                                : `<span class="px-2.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">متبقي €${remaining.toFixed(2)}</span>`
+                                : `<span class="amount-badge px-2.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">متبقي ${formatMoney(remaining)}</span>`
                             }
                         </div>
                     </div>
@@ -1129,11 +1162,11 @@
                     <div class="grid grid-cols-2 gap-2 text-xs font-extrabold bg-slate-50 p-3 rounded-xl border border-slate-200">
                         <div>
                             <span class="text-slate-500 block">المسلم للزبون:</span>
-                            <span class="text-slate-900 text-sm font-black">${(Number(tx.deliveredAmount) || 0).toLocaleString('en-US')} ${currSymbol}</span>
+                            <span class="amount-cell text-slate-900 text-sm font-black block">${formatMoney(tx.deliveredAmount, currSymbol, 0)}</span>
                         </div>
                         <div>
                             <span class="text-slate-500 block">سعر الحوالة (€):</span>
-                            <span class="text-slate-900 text-sm font-black">€${billed.toFixed(2)}</span>
+                            <span class="text-slate-900 text-sm font-black">${formatMoney(billed)}</span>
                         </div>
                     </div>
 
@@ -1165,7 +1198,7 @@
                 ? tx.installments.map((inst, index) => `
                     <div class="flex items-center justify-between text-xs font-extrabold py-2 px-3 bg-white border-2 border-slate-200 rounded-xl">
                         <span class="text-slate-600">الدفعة #${index + 1} (${inst.date || 'بدون تاريخ'})</span>
-                        <span class="text-slate-900 font-black text-sm">€${(Number(inst.amount) || 0).toFixed(2)}</span>
+                        <span class="text-slate-900 font-black text-sm">${formatMoney(inst.amount)}</span>
                     </div>
                   `).join('')
                 : `<p class="text-xs font-bold text-slate-400 italic">لا توجد دفعات مسجلة.</p>`;
@@ -1351,10 +1384,10 @@
             content.innerHTML = `
                 <div class="flex justify-between border-b pb-2 border-slate-100"><span>التاريخ:</span><span>${tx.date}</span></div>
                 <div class="flex justify-between border-b pb-2 border-slate-100"><span>اسم الزبون:</span><span class="font-black text-slate-900">${escapeHtml(tx.clientName)}</span></div>
-                <div class="flex justify-between border-b pb-2 border-slate-100"><span>المبلغ المسلّم:</span><span class="font-black text-emerald-700">${(Number(tx.deliveredAmount) || 0).toLocaleString()} ${currSymbol}</span></div>
-                <div class="flex justify-between border-b pb-2 border-slate-100"><span>سعر الحوالة (€):</span><span>€${billed.toFixed(2)}</span></div>
-                <div class="flex justify-between border-b pb-2 border-slate-100"><span>المبلغ المقبوض (€):</span><span>€${totalPaid.toFixed(2)}</span></div>
-                <div class="flex justify-between text-base font-black pt-1"><span>المتبقي (€):</span><span class="${remaining > 0 ? 'text-amber-600' : 'text-emerald-600'}">€${remaining.toFixed(2)}</span></div>
+                <div class="flex justify-between gap-3 border-b pb-2 border-slate-100"><span>المبلغ المسلّم:</span><span class="amount-cell font-black text-emerald-700">${formatMoney(tx.deliveredAmount, currSymbol, 0)}</span></div>
+                <div class="flex justify-between border-b pb-2 border-slate-100"><span>سعر الحوالة (€):</span><span>${formatMoney(billed)}</span></div>
+                <div class="flex justify-between border-b pb-2 border-slate-100"><span>المبلغ المقبوض (€):</span><span>${formatMoney(totalPaid)}</span></div>
+                <div class="flex justify-between text-base font-black pt-1"><span>المتبقي (€):</span><span class="amount-cell ${remaining > 0 ? 'text-amber-600' : 'text-emerald-600'}">${formatMoney(remaining)}</span></div>
             `;
 
             const whatsappMessage = `مرحباً ${tx.clientName}،%0Aإليك تفاصيل الحوالة الخاصّة بك:%0A- المبلغ المسلّم: ${tx.deliveredAmount} ${currSymbol}%0A- المطلوب باليورو: €${billed.toFixed(2)}%0A- المدفوع: €${totalPaid.toFixed(2)}%0A- المتبقي: €${remaining.toFixed(2)}%0Aشكراً لتعاملك معنا!`;
