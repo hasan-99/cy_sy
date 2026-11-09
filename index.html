@@ -834,8 +834,8 @@
             </div>
             <div class="p-5 space-y-4">
                 <div id="deleteSummary" class="text-sm font-bold text-slate-800"></div>
-                <label class="block text-xs font-black text-red-700">اكتب حذف للتأكيد</label>
-                <input id="deleteConfirmInput" type="text" class="w-full border-2 border-red-200 rounded-xl px-3 py-2 text-sm font-black outline-none focus:border-red-500">
+                <label class="block text-xs font-black text-red-700" for="deleteConfirmInput">اكتب سبب الحذف للتأكيد</label>
+                <input id="deleteConfirmInput" type="text" maxlength="500" placeholder="مثال: أُضيف السجل بالخطأ" class="w-full border-2 border-red-200 rounded-xl px-3 py-2 text-sm font-black outline-none focus:border-red-500">
                 <div class="flex items-center justify-end gap-2">
                     <button id="closeDeleteBtn" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-black">إلغاء</button>
                     <button id="confirmDeleteBtn" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-black disabled:opacity-40" disabled>حذف نهائي</button>
@@ -1999,11 +1999,16 @@
         async function confirmDeleteTransaction() {
             const tx = transactions.find(item => item.id === pendingDeleteId);
             if (!tx) return;
+            const deletionReason = document.getElementById('deleteConfirmInput').value.trim();
+            if (!deletionReason) {
+                showToast('اكتب سبب الحذف أولاً', true);
+                return;
+            }
             document.getElementById('deleteModal').classList.add('hidden');
             pushUndoSnapshot();
             setBusy(true);
             try {
-                const archived = { ...tx, originalId: tx.id, deletedAt: fb.serverTimestamp(), deletedBy: currentUser?.email || '' };
+                const archived = { ...tx, originalId: tx.id, deletionReason, deletedAt: fb.serverTimestamp(), deletedBy: currentUser?.email || '' };
                 delete archived.id;
                 await fb.addDoc(fb.collection(db, 'deletedTransfers'), archived);
                 await deleteTransfer(pendingDeleteId);
@@ -2032,6 +2037,7 @@
                         <div>
                             <p class="text-sm font-black text-slate-900">${escapeHtml(tx.clientName || 'بدون اسم')}</p>
                             <p class="text-xs font-bold text-slate-500">${escapeHtml(tx.date || '')} • ${formatMoney(tx.deliveredAmount, formatCurrencySymbol(tx.currency), 0)}</p>
+                            ${tx.deletionReason ? `<p class="text-xs font-bold text-red-700 mt-1">سبب الحذف: ${escapeHtml(tx.deletionReason)}</p>` : ''}
                         </div>
                         <button onclick="restoreDeletedTransfer('${escapeJs(tx.id)}')" class="px-3 py-2 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs">استرجاع</button>
                     </div>
@@ -2177,7 +2183,7 @@
             document.getElementById('closeDeleteBtn').onclick = () => document.getElementById('deleteModal').classList.add('hidden');
             document.getElementById('confirmDeleteBtn').onclick = confirmDeleteTransaction;
             document.getElementById('deleteConfirmInput').addEventListener('input', e => {
-                document.getElementById('confirmDeleteBtn').disabled = e.target.value.trim() !== 'حذف';
+                document.getElementById('confirmDeleteBtn').disabled = !e.target.value.trim();
             });
 
             document.getElementById('closeReceiptBtn').onclick = () => document.getElementById('receiptModal').classList.add('hidden');
