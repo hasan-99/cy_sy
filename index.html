@@ -46,6 +46,14 @@
         .app-brand-title { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
         .app-toolbar { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .5rem; }
         .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+        @media (min-width: 1024px) { .summary-grid.has-side { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .kpi-toggle { display: none; }
+        .kpi-toggle svg { transition: transform .2s ease; }
+        .kpi-toggle.open svg { transform: rotate(180deg); }
+        @media (max-width: 767px) {
+            .kpi-toggle { display: flex; }
+            #kpiGrid.kpi-collapsed { display: none; }
+        }
         .summary-grid > div { min-width: 0; min-height: 8.25rem; gap: .75rem; }
         .summary-grid h2 { overflow-wrap: anywhere; }
         .insight-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
@@ -139,12 +147,10 @@
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
                 grid-template-areas:
-                    "calc contacts activity report"
-                    "admin undo create create"
-                    "menu menu menu menu";
+                    "contacts activity report admin"
+                    "undo create create menu";
                 gap: .5rem;
             }
-            #openCalcBtn { grid-area: calc; }
             #openContactsBtn { grid-area: contacts; }
             #openActivityBtn { grid-area: activity; }
             #openReportBtn { grid-area: report; }
@@ -169,9 +175,9 @@
             .app-toolbar {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
                 grid-template-areas:
-                    "calc contacts activity"
-                    "report admin menu"
-                    "undo create create";
+                    "contacts activity report"
+                    "admin menu undo"
+                    "create create create";
             }
             .app-toolbar > button { min-height: 2.55rem; padding: .55rem !important; border-radius: .8rem; }
             .app-toolbar svg { width: 1rem; height: 1rem; }
@@ -201,7 +207,6 @@
             .mobile-card-head > div:last-child { flex: 0 1 44%; display: flex; justify-content: flex-start; }
             .mobile-card-head h4 { overflow-wrap: anywhere; line-height: 1.35; }
             .mobile-card-head .amount-badge { max-width: 100%; }
-            .mobile-money-grid { grid-template-columns: 1fr; }
             .mobile-card-actions { flex-direction: column; align-items: stretch; }
             .mobile-card-actions > button { justify-content: center; width: 100%; }
             .mobile-icon-actions { justify-content: center; }
@@ -296,12 +301,6 @@
                     <!-- Controls Toolbar -->
                     <div class="app-toolbar">
                         
-                        <!-- Currency Calc Button -->
-                        <button id="openCalcBtn" title="حاسبة تحويل العملات" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
-                            <i data-lucide="calculator" class="w-4 h-4 text-emerald-400"></i>
-                            <span class="hidden lg:inline">الحاسبة</span>
-                        </button>
-
                         <!-- Contacts Modal Button -->
                         <button id="openContactsBtn" title="دليل جهات الاتصال" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs sm:text-sm font-bold transition">
                             <i data-lucide="users" class="w-4 h-4 text-emerald-400"></i>
@@ -381,7 +380,15 @@
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
 
             <!-- Dynamic KPI Cards -->
-            <div class="summary-grid">
+            <button id="kpiToggleBtn" type="button" class="kpi-toggle items-center justify-between gap-3 w-full bg-white border-2 border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                <span class="flex items-center gap-2 text-sm font-black text-slate-800"><i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-500"></i> المؤشرات</span>
+                <span class="flex items-center gap-2 min-w-0">
+                    <span id="kpiToggleSummary" class="text-xs font-black text-amber-700 truncate">المتبقي €0.00</span>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 shrink-0"></i>
+                </span>
+            </button>
+
+            <div id="kpiGrid" class="summary-grid has-side kpi-collapsed">
                 <div class="bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wider text-slate-500">إجمالي المبالغ المسلّمة</p>
@@ -423,6 +430,28 @@
                     </div>
                     <div class="p-3.5 bg-amber-100 text-amber-700 rounded-2xl font-black">
                         <i data-lucide="clock" class="w-7 h-7"></i>
+                    </div>
+                </div>
+
+                <div id="kpiCostCard" class="bg-white p-5 rounded-2xl border-2 border-slate-300 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-600">إجمالي التكلفة علينا (€)</p>
+                        <h2 id="kpiTotalCost" class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">€0.00</h2>
+                        <p class="text-xs font-semibold text-slate-500 mt-0.5">مجموع التكلفة لكل الحوالات</p>
+                    </div>
+                    <div class="p-3.5 bg-slate-100 text-slate-700 rounded-2xl font-black">
+                        <i data-lucide="wallet" class="w-7 h-7"></i>
+                    </div>
+                </div>
+
+                <div id="kpiSideCard"class="bg-violet-50 p-5 rounded-2xl border-2 border-violet-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-violet-800">🔒 لي (€)</p>
+                        <h2 id="kpiTotalSide" class="text-2xl sm:text-3xl font-black text-violet-700 mt-1">€0.00</h2>
+                        <p class="text-xs font-semibold text-slate-500 mt-0.5">مجموع المبالغ الجانبية</p>
+                    </div>
+                    <div class="p-3.5 bg-violet-100 text-violet-700 rounded-2xl font-black">
+                        <i data-lucide="lock" class="w-7 h-7"></i>
                     </div>
                 </div>
             </div>
@@ -492,8 +521,7 @@
                                 <th class="py-4 px-4 text-left w-36">المبلغ المسلّم</th>
                                 <th class="py-4 px-4 text-left">التكلفة (€)</th>
                                 <th class="py-4 px-4 text-left">سعر الحوالة (€)</th>
-                                <th class="py-4 px-4 text-left">المدفوع (€)</th>
-                                <th class="py-4 px-4 text-left">المتبقي (€)</th>
+                                <th id="sideAmountTh" class="py-4 px-4 text-left text-violet-300">🔒 لي (€)</th>                                <th class="py-4 px-4 text-left">المتبقي (€)</th>
                                 <th class="py-4 px-4 text-center">الحالة</th>
                                 <th class="py-4 px-4 text-left">إجراءات</th>
                             </tr>
@@ -578,6 +606,15 @@
                             <input type="number" step="0.01" min="0" id="txBilledEur" placeholder="920.00" class="w-full pr-8 pl-3 py-2.5 border-2 border-slate-300 rounded-xl text-sm font-black focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                         </div>
                     </div>
+                </div>
+
+                <div id="sideAmountBox" class="bg-violet-50 p-4 rounded-2xl border-2 border-violet-200">
+                    <label class="block text-xs font-black text-violet-800 uppercase mb-1">مبلغ جانبي (خاص بي فقط) 🔒</label>
+                    <div class="relative">
+                        <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-500 font-extrabold text-sm">€</span>
+                        <input type="number" step="0.01" min="0" id="txSideAmountEur" placeholder="20.00" class="w-full pr-8 pl-3 py-2.5 border-2 border-violet-300 rounded-xl text-sm font-black focus:ring-2 focus:ring-violet-500 outline-none bg-white">
+                    </div>
+                    <p class="text-xs font-bold text-violet-700 mt-1">يُضاف فوق سعر الحوالة. الزبون يدفع المجموع (سعر الحوالة + هذا المبلغ)، والتقارير تعرض سعر الحوالة فقط وهذا المبلغ كسطر «لي».</p>
                 </div>
 
                 <div class="modal-summary flex items-center justify-between text-xs sm:text-sm font-black bg-emerald-100 text-emerald-950 border-2 border-emerald-300 rounded-xl px-4 py-3">
@@ -696,37 +733,6 @@
                     <i data-lucide="printer" class="w-4 h-4"></i> طباعة
                 </button>
                 <button id="closeReceiptBtn" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-black rounded-xl text-xs">إغلاق</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Exchange Calculator Modal -->
-    <div id="calcModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-        <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl border-2 border-slate-200 p-6 space-y-4 text-right">
-            <div class="flex justify-between items-center border-b pb-3 border-slate-200">
-                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-                    <i data-lucide="calculator" class="w-5 h-5 text-emerald-600"></i> حاسبة أسعار الصرف
-                </h3>
-                <button id="closeCalcBtn" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-xs font-black text-slate-700 mb-1">المبلغ المراد تحويله</label>
-                    <input type="number" id="calcAmount" placeholder="1000" class="w-full border-2 border-slate-300 rounded-xl p-2 text-sm font-bold outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-black text-slate-700 mb-1">سعر الصرف (سعر التكلفة لكل 1 يورو)</label>
-                    <input type="number" id="calcRate" placeholder="1.08" class="w-full border-2 border-slate-300 rounded-xl p-2 text-sm font-bold outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-black text-slate-700 mb-1">نسبة الربح / العمولة المضافة (%)</label>
-                    <input type="number" id="calcMargin" placeholder="2.5" class="w-full border-2 border-slate-300 rounded-xl p-2 text-sm font-bold outline-none focus:border-emerald-500">
-                </div>
-                <div class="bg-slate-100 p-3 rounded-xl border border-slate-200 space-y-1 text-xs font-black">
-                    <div class="flex justify-between text-slate-600"><span>التكلفة الصافية (€):</span><span id="calcResultCost">€0.00</span></div>
-                    <div class="flex justify-between text-emerald-700"><span>المطلوب مع الأرباح (€):</span><span id="calcResultBilled">€0.00</span></div>
-                </div>
             </div>
         </div>
     </div>
@@ -1037,6 +1043,16 @@
             if (btnText) btnText.innerText = showProfit ? 'إخفاء الأرباح' : 'إظهار الأرباح';
 
             if (modalProfitPreviewSpan) modalProfitPreviewSpan.classList.toggle('hidden', !showProfit);
+            const sideAmountBox = document.getElementById('sideAmountBox');
+            if (sideAmountBox) sideAmountBox.classList.toggle('hidden', !showProfit);
+            const sideAmountTh = document.getElementById('sideAmountTh');
+            if (sideAmountTh) sideAmountTh.classList.toggle('hidden', !showProfit);
+            const kpiSideCard = document.getElementById('kpiSideCard');
+            if (kpiSideCard) kpiSideCard.classList.toggle('hidden', !showProfit);
+            const kpiCostCard = document.getElementById('kpiCostCard');
+            if (kpiCostCard) kpiCostCard.classList.toggle('hidden', !showProfit);
+            const kpiGrid = document.getElementById('kpiGrid');
+            if (kpiGrid) kpiGrid.classList.toggle('has-side', showProfit);
             refreshIcons();
         }
 
@@ -1279,9 +1295,11 @@
             let totalReceived = 0;
             let totalRemaining = 0;
             let totalCost = 0;
+            let totalSide = 0;
             const deliveredByCurrency = {};
             list.forEach(tx => {
                 const totals = calculateTotals(tx);
+                totalSide += totals.side;
                 totalBilled += totals.billed;
                 totalReceived += totals.totalPaid;
                 totalRemaining += totals.remaining;
@@ -1297,6 +1315,7 @@
                 totalReceived,
                 totalRemaining,
                 totalCost,
+                totalSide,
                 distributorPaid,
                 cashOnHand,
                 deliveredByCurrency
@@ -1384,12 +1403,14 @@
         function calculateTotals(tx) {
             const totalPaid = (tx.installments || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
             const cost = Number(tx.partnerCostEur) || 0;
-            const billed = (tx.billedEur !== undefined && tx.billedEur !== null && tx.billedEur !== '' && Number(tx.billedEur) > 0) ? Number(tx.billedEur) : cost;
+            const record = (tx.billedEur !== undefined && tx.billedEur !== null && tx.billedEur !== '' && Number(tx.billedEur) > 0) ? Number(tx.billedEur) : cost;
+            const side = Math.max(Number(tx.sideAmountEur) || 0, 0);
+            const billed = record + side;
             const remaining = Math.max(0, billed - totalPaid);
             const profit = billed - cost;
             const isPaid = remaining <= 0.01;
             const paidPercentage = billed > 0 ? Math.min(100, Math.round((totalPaid / billed) * 100)) : 0;
-            return { billed, cost, totalPaid, remaining, profit, isPaid, paidPercentage };
+            return { billed, cost, totalPaid, remaining, profit, isPaid, paidPercentage, side, record };
         }
 
         function formatCurrencySymbol(curr) {
@@ -1502,6 +1523,9 @@
             document.getElementById('kpiTotalBilled').innerText = money(summary.totalBilled);
             document.getElementById('kpiTotalProfit').innerText = summary.count.toLocaleString('en-US');
             document.getElementById('kpiTotalPending').innerText = money(summary.totalRemaining);
+            document.getElementById('kpiTotalSide').innerText = money(summary.totalSide);
+            document.getElementById('kpiTotalCost').innerText = money(summary.totalCost);
+            document.getElementById('kpiToggleSummary').innerText = `المتبقي ${money(summary.totalRemaining)}`;
             renderPaymentAlerts();
             renderAdminFinance();
         }
@@ -1579,7 +1603,7 @@
             }
 
             list.forEach(tx => {
-                const { billed, cost, totalPaid, remaining, isPaid, paidPercentage } = calculateTotals(tx);
+                const { billed, cost, totalPaid, remaining, isPaid, paidPercentage, side } = calculateTotals(tx);
                 const isExpanded = expandedRows.has(tx.id);
                 const currSymbol = formatCurrencySymbol(tx.currency);
                 const safeId = escapeJs(tx.id);
@@ -1597,15 +1621,13 @@
                     <td class="py-4 px-3 text-xs font-extrabold text-slate-500">${escapeHtml(tx.date)}</td>
                     <td class="py-4 px-4 font-black text-slate-900 text-base">
                         <div>${escapeHtml(tx.clientName)}</div>
-                        ${tx.partnerName ? `<span class="text-xs text-slate-500 font-bold">الوسيط: ${escapeHtml(tx.partnerName)}</span>` : ''}
-                    </td>
+                        ${tx.partnerName ? `<span class="text-xs text-slate-500 font-bold">الوسيط: ${escapeHtml(tx.partnerName)}</span>` : ''}                    </td>
                     <td class="py-4 px-4 text-left font-black text-slate-900 text-base amount-cell">
                         ${formatMoney(tx.deliveredAmount, currSymbol, 0)}
                     </td>
                     <td class="py-4 px-4 text-left text-slate-600 font-bold amount-cell">${formatMoney(cost)}</td>
                     <td class="py-4 px-4 text-left font-black text-slate-900 text-base amount-cell">${formatMoney(billed)}</td>
-                    <td class="py-4 px-4 text-left text-slate-800 amount-cell">${formatMoney(totalPaid)}</td>
-                    <td class="py-4 px-4 text-left font-extrabold text-base amount-cell ${remaining > 0 ? 'text-amber-600' : 'text-slate-400'}">${formatMoney(remaining)}</td>
+                    <td class="${showProfit ? '' : 'hidden'} py-4 px-4 text-left font-black text-violet-700 amount-cell">${side > 0 ? formatMoney(side) : '<span class="text-slate-300">-</span>'}</td>                    <td class="py-4 px-4 text-left font-extrabold text-base amount-cell ${remaining > 0 ? 'text-amber-600' : 'text-slate-400'}">${formatMoney(remaining)}</td>
                     <td class="py-4 px-4 text-center">
                         ${isPaid 
                             ? `<span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">مكتمل</span>`
@@ -1647,8 +1669,7 @@
                     <div class="mobile-card-head border-b border-slate-100 pb-2">
                         <div class="min-w-0">
                             <h4 class="text-base font-black text-slate-900">${escapeHtml(tx.clientName)}</h4>
-                            <p class="text-xs font-bold text-slate-500">${escapeHtml(tx.date)} ${tx.partnerName ? `• الوسيط: ${escapeHtml(tx.partnerName)}` : ''}</p>
-                        </div>
+                            <p class="text-xs font-bold text-slate-500">${escapeHtml(tx.date)} ${tx.partnerName ? `• الوسيط: ${escapeHtml(tx.partnerName)}` : ''}</p>                        </div>
                         <div class="shrink-0">
                             ${isPaid 
                                 ? `<span class="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">مكتمل</span>`
@@ -1666,6 +1687,10 @@
                             <span class="text-slate-500 block">سعر الحوالة (€):</span>
                             <span class="amount-cell text-slate-900 text-sm font-black block">${formatMoney(billed)}</span>
                         </div>
+                        ${showProfit && side > 0 ? `<div class="min-w-0">
+                            <span class="text-violet-700 block">🔒 لي (€):</span>
+                            <span class="amount-cell text-violet-700 text-sm font-black block">${formatMoney(side)}</span>
+                        </div>` : ''}
                     </div>
 
                     <div class="mobile-card-actions pt-1">
@@ -1726,11 +1751,12 @@
                 showToast('لا توجد حوالات لهذا الزبون', true);
                 return;
             }
-            let billed = 0, paid = 0, remaining = 0;
+            let billed = 0, paid = 0, remaining = 0, sideSum = 0;
             const deliveredByCurrency = {};
             list.forEach(tx => {
                 const totals = calculateTotals(tx);
-                billed += totals.billed;
+                billed += totals.record;
+                sideSum += totals.side;
                 paid += totals.totalPaid;
                 remaining += totals.remaining;
                 deliveredByCurrency[tx.currency || ''] = (deliveredByCurrency[tx.currency || ''] || 0) + (Number(tx.deliveredAmount) || 0);
@@ -1743,7 +1769,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <div class="bg-blue-50 border-2 border-blue-100 rounded-2xl p-4"><p class="text-xs font-black text-blue-700">عدد الحوالات</p><p class="text-xl font-black text-slate-900">${list.length}</p></div>
                     <div class="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-4"><p class="text-xs font-black text-emerald-700">المسلم</p><p class="text-lg font-black text-slate-900 amount-cell">${delivered || '0'}</p></div>
-                    <div class="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4"><p class="text-xs font-black text-indigo-700">المطلوب</p><p class="text-xl font-black text-slate-900">${formatMoney(billed)}</p></div>
+                    <div class="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4"><p class="text-xs font-black text-indigo-700">المطلوب</p><p class="text-xl font-black text-slate-900">${formatMoney(billed)}</p>${showProfit && sideSum > 0 ? `<p class="text-xs font-black text-violet-700 mt-1">🔒 لي: ${formatMoney(sideSum)}</p>` : ''}</div>
                     <div class="bg-amber-50 border-2 border-amber-100 rounded-2xl p-4"><p class="text-xs font-black text-amber-700">المتبقي</p><p class="text-xl font-black text-amber-700">${formatMoney(remaining)}</p></div>
                 </div>
                 <div class="space-y-2">
@@ -1756,7 +1782,8 @@
                                     <p class="text-xs font-bold text-slate-500">${escapeHtml(tx.notes || 'بدون ملاحظات')}</p>
                                 </div>
                                 <div class="text-xs font-black text-left">
-                                    <p>المطلوب: ${formatMoney(totals.billed)}</p>
+                                    <p>المطلوب: ${formatMoney(totals.record)}</p>
+                                    ${showProfit && totals.side > 0 ? `<p class="text-violet-700">🔒 لي: ${formatMoney(totals.side)}</p>` : ''}
                                     <p class="${totals.remaining > 0 ? 'text-amber-700' : 'text-emerald-700'}">المتبقي: ${formatMoney(totals.remaining)}</p>
                                 </div>
                             </div>
@@ -1770,10 +1797,11 @@
 
         function openReportModal() {
             const list = getFilteredTransactions();
-            let billed = 0, paid = 0, remaining = 0;
+            let billed = 0, paid = 0, remaining = 0, sideSum = 0;
             list.forEach(tx => {
                 const totals = calculateTotals(tx);
-                billed += totals.billed;
+                billed += totals.record;
+                sideSum += totals.side;
                 paid += totals.totalPaid;
                 remaining += totals.remaining;
             });
@@ -1784,7 +1812,7 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4"><p class="text-xs font-black text-slate-500">عدد السجلات</p><p class="text-xl font-black">${list.length}</p></div>
-                    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4"><p class="text-xs font-black text-indigo-700">المطلوب</p><p class="text-xl font-black">${formatMoney(billed)}</p></div>
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4"><p class="text-xs font-black text-indigo-700">المطلوب</p><p class="text-xl font-black">${formatMoney(billed)}</p>${showProfit && sideSum > 0 ? `<p class="text-xs font-black text-violet-700 mt-1">🔒 لي: ${formatMoney(sideSum)}</p>` : ''}</div>
                     <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4"><p class="text-xs font-black text-emerald-700">المقبوض</p><p class="text-xl font-black">${formatMoney(paid)}</p></div>
                     <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4"><p class="text-xs font-black text-amber-700">المتبقي</p><p class="text-xl font-black">${formatMoney(remaining)}</p></div>
                 </div>
@@ -1793,7 +1821,7 @@
                     <tbody>
                         ${list.map(tx => {
                             const totals = calculateTotals(tx);
-                            return `<tr class="border-b border-slate-200"><td class="p-2">${tx.date}</td><td class="p-2">${escapeHtml(tx.clientName)}</td><td class="p-2 text-left">${formatMoney(totals.billed)}</td><td class="p-2 text-left">${formatMoney(totals.totalPaid)}</td><td class="p-2 text-left">${formatMoney(totals.remaining)}</td></tr>`;
+                            return `<tr class="border-b border-slate-200"><td class="p-2">${tx.date}</td><td class="p-2">${escapeHtml(tx.clientName)}</td><td class="p-2 text-left">${formatMoney(totals.record)}${showProfit && totals.side > 0 ? `<div class="text-violet-700 text-xs font-black">🔒 لي: ${formatMoney(totals.side)}</div>` : ''}</td><td class="p-2 text-left">${formatMoney(totals.totalPaid)}</td><td class="p-2 text-left">${formatMoney(totals.remaining)}</td></tr>`;
                         }).join('')}
                     </tbody>
                 </table>
@@ -1835,6 +1863,7 @@
             }
             document.getElementById('txPartnerCostEur').value = tx.partnerCostEur;
             document.getElementById('txBilledEur').value = tx.billedEur !== undefined ? tx.billedEur : '';
+            document.getElementById('txSideAmountEur').value = tx.sideAmountEur ? tx.sideAmountEur : '';
             document.getElementById('txPartner').value = tx.partnerName || '';
             document.getElementById('txNotes').value = tx.notes || '';
 
@@ -1878,7 +1907,8 @@
         function updateFormCalculations() {
             const cost = Number(document.getElementById('txPartnerCostEur').value) || 0;
             const billedRaw = document.getElementById('txBilledEur').value;
-            const billed = (billedRaw !== '' && billedRaw !== null) ? Number(billedRaw) : cost;
+            const side = Number(document.getElementById('txSideAmountEur').value) || 0;
+            const billed = ((billedRaw !== '' && billedRaw !== null) ? Number(billedRaw) : cost) + side;
 
             let totalPaid = 0;
             document.querySelectorAll('.inst-amount').forEach(input => { totalPaid += Number(input.value) || 0; });
@@ -1901,6 +1931,7 @@
             const partnerCostEur = Number(document.getElementById('txPartnerCostEur').value) || 0;
             const billedEurRaw = document.getElementById('txBilledEur').value;
             const billedEur = (billedEurRaw !== '' && billedEurRaw !== null) ? Number(billedEurRaw) : partnerCostEur;
+            const sideAmountEur = Number(document.getElementById('txSideAmountEur').value) || 0;
             const partnerName = document.getElementById('txPartner').value.trim();
             const notes = document.getElementById('txNotes').value.trim();
 
@@ -1917,7 +1948,7 @@
                 return;
             }
 
-            const data = { date, clientName, deliveredAmount, currency, partnerCostEur, billedEur, partnerName, notes, installments };
+            const data = { date, clientName, deliveredAmount, currency, partnerCostEur, billedEur, sideAmountEur, partnerName, notes, installments };
             pendingReviewData = { editId, data };
             showReviewModal(data, Boolean(editId));
         }
@@ -2100,12 +2131,12 @@
         // --- Export / Import ---
         function exportToCsv(includeProfit = true) {
             let csv = "\uFEFF";
-            csv += includeProfit ? "المعرف,التاريخ,اسم الزبون,المبلغ المسلم,العملة,التكلفة علينا €,سعر الحوالة €,الربح €,المدفوع €,المتبقي €,الحالة,الوسيط,ملاحظات\n" : "المعرف,التاريخ,اسم الزبون,المبلغ المسلم,العملة,سعر الحوالة €,المدفوع €,المتبقي €,الحالة,الوسيط,ملاحظات\n";
+            csv += includeProfit ? "المعرف,التاريخ,اسم الزبون,المبلغ المسلم,العملة,التكلفة علينا €,سعر الحوالة €,الربح €,المسجل في التقرير €,لي €,المدفوع €,المتبقي €,الحالة,الوسيط,ملاحظات\n" : "المعرف,التاريخ,اسم الزبون,المبلغ المسلم,العملة,سعر الحوالة €,المدفوع €,المتبقي €,الحالة,الوسيط,ملاحظات\n";
 
             transactions.forEach(tx => {
-                const { billed, cost, totalPaid, remaining, profit, isPaid } = calculateTotals(tx);
+                const { billed, cost, totalPaid, remaining, profit, isPaid, side, record } = calculateTotals(tx);
                 const row = includeProfit 
-                    ? [`"${tx.id}"`, `"${tx.date}"`, `"${tx.clientName}"`, tx.deliveredAmount, `"${tx.currency}"`, cost.toFixed(2), billed.toFixed(2), profit.toFixed(2), totalPaid.toFixed(2), remaining.toFixed(2), isPaid ? "مكتمل" : "غير مكتمل", `"${tx.partnerName||''}"`, `"${tx.notes||''}"`]
+                    ? [`"${tx.id}"`, `"${tx.date}"`, `"${tx.clientName}"`, tx.deliveredAmount, `"${tx.currency}"`, cost.toFixed(2), billed.toFixed(2), profit.toFixed(2), record.toFixed(2), side.toFixed(2), totalPaid.toFixed(2), remaining.toFixed(2), isPaid ? "مكتمل" : "غير مكتمل", `"${tx.partnerName||''}"`, `"${tx.notes||''}"`]
                     : [`"${tx.id}"`, `"${tx.date}"`, `"${tx.clientName}"`, tx.deliveredAmount, `"${tx.currency}"`, billed.toFixed(2), totalPaid.toFixed(2), remaining.toFixed(2), isPaid ? "مكتمل" : "غير مكتمل", `"${tx.partnerName||''}"`, `"${tx.notes||''}"`];
                 csv += row.join(",") + "\n";
             });
@@ -2160,9 +2191,6 @@
             document.getElementById('logoutBtn').addEventListener('click', logoutUser);
             document.getElementById('migrateDataBtn').addEventListener('click', migrateLocalStorageToFirestore);
 
-            document.getElementById('openCalcBtn').onclick = () => document.getElementById('calcModal').classList.remove('hidden');
-            document.getElementById('closeCalcBtn').onclick = () => document.getElementById('calcModal').classList.add('hidden');
-
             document.getElementById('openContactsBtn').onclick = () => document.getElementById('contactsModal').classList.remove('hidden');
             document.getElementById('openActivityBtn').onclick = openActivityModal;
             document.getElementById('closeActivityBtn').onclick = () => document.getElementById('activityModal').classList.add('hidden');
@@ -2188,20 +2216,10 @@
 
             document.getElementById('closeReceiptBtn').onclick = () => document.getElementById('receiptModal').classList.add('hidden');
 
-            // Exchange Calc Dynamic Inputs
-            const updateCalc = () => {
-                const amt = Number(document.getElementById('calcAmount').value) || 0;
-                const rate = Number(document.getElementById('calcRate').value) || 1;
-                const margin = Number(document.getElementById('calcMargin').value) || 0;
-
-                const costEur = amt / rate;
-                const billedEur = costEur * (1 + margin / 100);
-
-                document.getElementById('calcResultCost').innerText = formatMoney(costEur);
-                document.getElementById('calcResultBilled').innerText = formatMoney(billedEur);
+            document.getElementById('kpiToggleBtn').onclick = () => {
+                const collapsed = document.getElementById('kpiGrid').classList.toggle('kpi-collapsed');
+                document.getElementById('kpiToggleBtn').classList.toggle('open', !collapsed);
             };
-
-            ['calcAmount', 'calcRate', 'calcMargin'].forEach(id => document.getElementById(id).oninput = updateCalc);
 
             // Add Contact Form
             document.getElementById('addContactForm').onsubmit = async (e) => {
