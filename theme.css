@@ -1,0 +1,186 @@
+/* ==========================================================================
+   Theme: Nexus-AI (light default + dark), sky-blue accent.
+
+   HOW IT IS CONTROLLED
+   - Same structure as Nexus-AI css/style.css: light tokens in :root, dark tokens
+     in html[data-theme="dark"]. The "Nexus-AI base palette" tokens below are
+     copied from there; to follow a Nexus-AI palette change, paste its two
+     blocks over the ones here. Everything else on the page derives from tokens.
+   - theme.js sets data-theme and injects the switch (remembered in localStorage).
+   - Screen only: printed receipts and reports keep their own white styling.
+   ========================================================================== */
+@media screen {
+  /* ---------- LIGHT (default) ---------- */
+  :root {
+    /* Nexus-AI base palette (light) */
+    --bg:        oklch(0.98 0.005 255);
+    --bg-2:      oklch(0.965 0.006 255);
+    --panel:     oklch(1 0 0);
+    --panel-2:   oklch(0.95 0.008 255);
+    --text:      oklch(0.26 0.03 260);
+    --muted:     oklch(0.47 0.03 260);
+    --dim:       oklch(0.62 0.025 260);
+    --line:      oklch(0.90 0.012 255);
+    --line-soft: oklch(0.94 0.008 255);
+    --accent:    oklch(0.70 0.14 233);
+    --accent-2:  oklch(0.60 0.14 233);
+    --accent-bg: oklch(0.70 0.14 233 / 0.14);
+    --warm-ink:  oklch(0.99 0.01 255);
+
+    /* App-only tokens (light) */
+    --accent-solid: oklch(0.55 0.14 233);
+    --accent-line:  oklch(0.70 0.14 233 / 0.45);
+    --chrome-bg:    oklch(0.26 0.03 260);   /* header + table head */
+    --chrome-btn:   oklch(0.33 0.03 260);
+    --chrome-btn-2: oklch(0.40 0.03 260);
+    --chrome-line:  oklch(0.42 0.03 260);
+    --chrome-text:  oklch(0.94 0.01 255);
+    --chrome-muted: oklch(0.80 0.02 258);
+    --ok-bg:   oklch(0.95 0.05 160);  --ok-line:   oklch(0.84 0.09 160);  --ok-text:   oklch(0.40 0.11 160);
+    --warn-bg: oklch(0.96 0.06 85);   --warn-line: oklch(0.84 0.11 80);   --warn-text: oklch(0.45 0.11 70);
+    --bad-bg:  oklch(0.95 0.04 20);   --bad-line:  oklch(0.84 0.09 20);   --bad-text:  oklch(0.46 0.16 22);
+    --priv-bg: oklch(0.95 0.04 300);  --priv-line: oklch(0.84 0.09 300);  --priv-text: oklch(0.42 0.14 300);
+    color-scheme: light;
+  }
+
+  /* ---------- DARK (Nexus-AI dark) ---------- */
+  html[data-theme="dark"] {
+    /* Nexus-AI base palette (dark) */
+    --bg:        oklch(0.205 0.018 260);
+    --bg-2:      oklch(0.238 0.020 260);
+    --panel:     oklch(0.262 0.022 260);
+    --panel-2:   oklch(0.300 0.024 260);
+    --text:      oklch(0.95 0.010 255);
+    --muted:     oklch(0.74 0.018 258);
+    --dim:       oklch(0.60 0.018 258);
+    --line:      oklch(0.375 0.020 260);
+    --line-soft: oklch(0.320 0.016 260);
+    --accent:    oklch(0.74 0.15 233);
+    --accent-2:  oklch(0.64 0.15 233);
+    --accent-bg: oklch(0.74 0.15 233 / 0.18);
+    --warm-ink:  oklch(0.16 0.02 260);
+
+    /* App-only tokens (dark) */
+    --accent-solid: oklch(0.52 0.14 233);
+    --accent-line:  oklch(0.74 0.15 233 / 0.45);
+    --chrome-bg:    oklch(0.238 0.020 260);
+    --chrome-btn:   oklch(0.262 0.022 260);
+    --chrome-btn-2: oklch(0.300 0.024 260);
+    --chrome-line:  oklch(0.375 0.020 260);
+    --chrome-text:  oklch(0.95 0.010 255);
+    --chrome-muted: oklch(0.74 0.018 258);
+    --ok-bg:   oklch(0.36 0.07 160 / 0.55);  --ok-line:   oklch(0.52 0.10 160 / 0.6);  --ok-text:   oklch(0.84 0.14 160);
+    --warn-bg: oklch(0.36 0.07 75 / 0.55);   --warn-line: oklch(0.55 0.11 75 / 0.6);   --warn-text: oklch(0.86 0.14 80);
+    --bad-bg:  oklch(0.34 0.09 20 / 0.55);   --bad-line:  oklch(0.52 0.13 20 / 0.6);   --bad-text:  oklch(0.82 0.14 22);
+    --priv-bg: oklch(0.35 0.08 300 / 0.55);  --priv-line: oklch(0.52 0.11 300 / 0.6);  --priv-text: oklch(0.85 0.12 300);
+    color-scheme: dark;
+  }
+
+  /* ======================================================================
+     Rules below only use tokens, so they work for both themes.
+     ====================================================================== */
+
+  /* ---------- Page + scrollbars ---------- */
+  html, body, body.bg-slate-100 { background: var(--bg) !important; color: var(--text) !important; }
+  ::-webkit-scrollbar-track { background: var(--bg-2) !important; }
+  ::-webkit-scrollbar-thumb { background: var(--line) !important; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--dim) !important; }
+
+  /* ---------- Surfaces ---------- */
+  .bg-white { background-color: var(--panel) !important; }
+  .bg-slate-50 { background-color: var(--bg-2) !important; }
+  .bg-slate-100, .bg-slate-100\/80 { background-color: var(--panel-2) !important; }
+  .bg-slate-200 { background-color: var(--line-soft) !important; }
+  .bg-slate-300 { background-color: var(--line) !important; }
+  /* header + table head + their buttons */
+  .bg-slate-900 { background-color: var(--chrome-bg) !important; }
+  .bg-slate-800 { background-color: var(--chrome-btn) !important; }
+  .bg-slate-700 { background-color: var(--chrome-btn-2) !important; }
+  .hover\:bg-slate-700:hover, .hover\:bg-slate-800:hover { background-color: var(--chrome-btn-2) !important; }
+  .text-slate-200 { color: var(--chrome-text) !important; }
+  .text-slate-300 { color: var(--chrome-muted) !important; }
+  .border-slate-700, .border-slate-800 { border-color: var(--chrome-line) !important; }
+
+  /* ---------- Text ---------- */
+  .text-slate-950, .text-slate-900, .text-slate-800 { color: var(--text) !important; }
+  .text-slate-700, .text-slate-600, .text-slate-500 { color: var(--muted) !important; }
+  .text-slate-400 { color: var(--dim) !important; }
+
+  /* ---------- Borders ---------- */
+  .border-slate-100, .divide-slate-100 > * + * { border-color: var(--line-soft) !important; }
+  .border-slate-200, .border-slate-300 { border-color: var(--line) !important; }
+
+  /* ---------- Inputs ---------- */
+  input, select, textarea { color: var(--text); }
+  input.bg-white, select.bg-white, textarea.bg-white { background-color: var(--bg-2) !important; }
+  input::placeholder, textarea::placeholder { color: var(--dim) !important; }
+  select option { background: var(--panel); color: var(--text); }
+
+  /* ---------- Accent (was emerald): buttons, focus, highlights ---------- */
+  .bg-emerald-400, .bg-emerald-500, .bg-green-500 { background-color: var(--accent) !important; }
+  .bg-emerald-600, .bg-emerald-700, .bg-green-600 { background-color: var(--accent-solid) !important; }
+  .bg-emerald-500\/20 { background-color: var(--accent-bg) !important; }
+  .hover\:bg-emerald-400:hover, .hover\:bg-emerald-500:hover { background-color: var(--accent-2) !important; }
+  .hover\:bg-emerald-600:hover, .hover\:bg-emerald-700:hover { background-color: var(--accent-solid) !important; }
+  .bg-emerald-400.text-slate-950, .bg-emerald-500.text-slate-950, .bg-green-500.text-slate-950,
+  .bg-emerald-400.text-white, .bg-emerald-500.text-white { color: var(--warm-ink) !important; }
+  .bg-emerald-600.text-white, .bg-emerald-700.text-white, .bg-green-600.text-white { color: #fff !important; }
+  .text-emerald-300, .text-emerald-400, .text-cyan-300, .text-cyan-400, .text-cyan-600 { color: var(--accent) !important; }
+  .border-emerald-500, .border-emerald-500\/40, .focus\:border-emerald-500:focus { border-color: var(--accent) !important; }
+  .ring-emerald-500, .focus\:ring-emerald-500:focus { --tw-ring-color: var(--accent) !important; }
+  .ring-sky-400 { --tw-ring-color: var(--accent) !important; }
+  .hover\:text-emerald-700:hover, .hover\:text-emerald-600:hover { color: var(--accent-solid) !important; }
+
+  /* ---------- Success tints (paid / complete) ---------- */
+  .bg-emerald-50, .bg-emerald-100 { background-color: var(--ok-bg) !important; }
+  .text-emerald-100, .text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-950 { color: var(--ok-text) !important; }
+  .border-emerald-100, .border-emerald-200, .border-emerald-300 { border-color: var(--ok-line) !important; }
+  .hover\:bg-emerald-50:hover, .hover\:bg-emerald-100:hover { background-color: var(--ok-bg) !important; }
+
+  /* ---------- Warning tints (remaining) ---------- */
+  .bg-amber-50, .bg-amber-100 { background-color: var(--warn-bg) !important; }
+  .bg-amber-700, .bg-amber-800 { background-color: oklch(0.50 0.12 70) !important; }
+  .text-amber-100, .text-amber-300, .text-amber-400, .text-amber-600, .text-amber-700, .text-amber-800 { color: var(--warn-text) !important; }
+  .border-amber-100, .border-amber-200, .border-amber-300 { border-color: var(--warn-line) !important; }
+
+  /* ---------- Danger tints ---------- */
+  .bg-red-50, .bg-red-100, .bg-rose-50, .bg-rose-100 { background-color: var(--bad-bg) !important; }
+  .text-red-100, .text-red-500, .text-red-600, .text-red-700, .text-rose-700 { color: var(--bad-text) !important; }
+  .border-red-200, .border-rose-100, .border-rose-200 { border-color: var(--bad-line) !important; }
+  .hover\:bg-red-50:hover, .hover\:bg-rose-50:hover { background-color: var(--bad-bg) !important; }
+  .hover\:text-red-600:hover, .hover\:text-red-700:hover { color: var(--bad-text) !important; }
+
+  /* ---------- Info tints (blue / indigo / sky) ---------- */
+  .bg-blue-50, .bg-blue-100, .bg-indigo-50, .bg-indigo-100, .bg-sky-50, .bg-sky-100 { background-color: var(--accent-bg) !important; }
+  .bg-blue-700, .bg-blue-800, .bg-sky-500, .bg-sky-600 { background-color: var(--accent-solid) !important; }
+  .text-blue-100, .text-blue-700, .text-indigo-600, .text-indigo-700, .text-sky-700, .text-sky-800, .text-sky-950 { color: var(--accent-solid) !important; }
+  .border-blue-100, .border-indigo-100, .border-indigo-200, .border-sky-100, .border-sky-200, .border-sky-500 { border-color: var(--accent-line) !important; }
+  .hover\:bg-blue-100:hover, .hover\:bg-blue-50:hover, .hover\:bg-violet-50:hover, .hover\:bg-violet-100:hover { background-color: var(--accent-bg) !important; }
+  .hover\:text-blue-700:hover, .hover\:text-violet-700:hover { color: var(--accent-solid) !important; }
+
+  /* ---------- Private (violet) tints ---------- */
+  .bg-violet-50, .bg-violet-100 { background-color: var(--priv-bg) !important; }
+  .bg-violet-700, .bg-violet-800 { background-color: oklch(0.48 0.14 300) !important; }
+  .text-violet-100, .text-violet-300, .text-violet-400, .text-violet-500, .text-violet-700, .text-violet-800 { color: var(--priv-text) !important; }
+  .border-violet-200, .border-violet-300 { border-color: var(--priv-line) !important; }
+  .ring-violet-400, .ring-violet-500, .focus\:ring-violet-500:focus { --tw-ring-color: oklch(0.65 0.14 300) !important; }
+
+  /* ---------- Colored icons/text sitting on the dark header + table head stay bright ---------- */
+  header .text-amber-300, header .text-amber-400 { color: oklch(0.85 0.14 80) !important; }
+  header .text-violet-300, header .text-violet-400, thead .text-violet-300 { color: oklch(0.86 0.11 300) !important; }
+  header .text-red-100, header .text-red-500 { color: oklch(0.82 0.14 22) !important; }
+
+  /* ---------- Hover states on neutrals ---------- */
+  .hover\:bg-slate-50:hover, .hover\:bg-slate-100:hover, .hover\:bg-slate-200:hover { background-color: var(--panel-2) !important; }
+  .hover\:text-slate-600:hover, .hover\:text-slate-700:hover, .hover\:text-slate-900:hover { color: var(--text) !important; }
+
+  /* ---------- The page's own small CSS rules ---------- */
+  .filter-select-icon { color: var(--muted) !important; }
+  .filter-status .filter-select-icon { color: var(--accent-solid) !important; background: var(--accent-bg) !important; }
+  .filter-sort .filter-select-icon { color: var(--priv-text) !important; background: var(--priv-bg) !important; }
+
+  /* ---------- Theme switch button ---------- */
+  .theme-toggle { position: fixed; bottom: 1rem; left: 1rem; z-index: 45; width: 2.75rem; height: 2.75rem; border-radius: 9999px; border: 2px solid var(--line); background: var(--panel); color: var(--text); font-size: 1.25rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px oklch(0.2 0.03 260 / 0.25); display: flex; align-items: center; justify-content: center; }
+  .theme-toggle:hover { border-color: var(--accent); transform: scale(1.06); }
+}
+@media print { .theme-toggle { display: none !important; } }
