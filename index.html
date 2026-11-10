@@ -123,6 +123,7 @@
         .feature-chip { min-height: 2.5rem; }
         .mobile-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
         .mobile-money-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+        .mobile-money-grid .amount-cell { text-align: right; }
         .mobile-card-actions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
         .mobile-icon-actions { display: flex; align-items: center; gap: .25rem; flex-wrap: wrap; justify-content: flex-end; }
         .payment-alert-item-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
@@ -206,7 +207,9 @@
             #mobileCardsContainer { padding: .75rem !important; }
             .mobile-card-head { align-items: flex-start; gap: .5rem; }
             .mobile-card-head > div:first-child { flex: 1 1 auto; min-width: 0; }
-            .mobile-card-head > div:last-child { flex: 0 1 44%; display: flex; justify-content: flex-start; }
+            .mobile-card-head > div:last-child { flex: 0 0 auto; display: flex; flex-wrap: nowrap; gap: .3rem; justify-content: flex-start; }
+            .mobile-card-head > div:last-child .amount-badge { white-space: nowrap; }
+            @media (max-width: 380px) { .mobile-card-head > div:last-child { flex-wrap: wrap; max-width: 62%; } }
             .mobile-card-head h4 { overflow-wrap: anywhere; line-height: 1.35; }
             .mobile-card-head .amount-badge { max-width: 100%; }
             .mobile-card-actions { flex-direction: column; align-items: stretch; }
@@ -1682,10 +1685,11 @@
                             <h4 class="text-base font-black text-slate-900">${escapeHtml(tx.clientName)}</h4>
                             <p class="text-xs font-bold text-slate-500">${escapeHtml(tx.date)} ${tx.partnerName ? `• الوسيط: ${escapeHtml(tx.partnerName)}` : ''}</p>                        </div>
                         <div class="shrink-0">
-                            ${isPaid 
+                            ${isPaid
                                 ? `<span class="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">مكتمل</span>`
                                 : `<span class="amount-badge px-2.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">متبقي ${formatMoney(remaining)}</span>`
                             }
+                            ${showProfit && side > 0 ? `<span class="amount-badge px-2.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-800 border border-violet-300">🔒 لي ${formatMoney(side)}</span>` : ''}
                         </div>
                     </div>
 
@@ -1697,12 +1701,7 @@
                         <div class="min-w-0">
                             <span class="text-slate-500 block">سعر الحوالة (€):</span>
                             <span class="amount-cell text-slate-900 text-sm font-black block">${formatMoney(billed)}</span>
-                        </div>
-                        ${showProfit && side > 0 ? `<div class="min-w-0">
-                            <span class="text-violet-700 block">🔒 لي (€):</span>
-                            <span class="amount-cell inline-block mt-0.5 px-2.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-800 border border-violet-300">${formatMoney(side)}</span>
-                        </div>` : ''}
-                    </div>
+                        </div>                    </div>
 
                     <div class="mobile-card-actions pt-1">
                         <button onclick="toggleExpandRow('${safeId}')" class="text-xs font-black text-slate-700 flex items-center gap-1 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
