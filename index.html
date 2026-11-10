@@ -1628,9 +1628,9 @@
                     <td class="py-4 px-4 text-left font-black text-slate-900 text-base amount-cell">
                         ${formatMoney(tx.deliveredAmount, currSymbol, 0)}
                     </td>
-                    <td class="py-4 px-4 text-left text-slate-600 font-bold amount-cell">${formatMoney(cost)}</td>
+                    <td class="py-4 px-4 text-left amount-cell"><span class="inline-block px-2.5 py-1 rounded-full text-xs font-black bg-sky-100 text-sky-800 border border-sky-200">${formatMoney(cost)}</span></td>
                     <td class="py-4 px-4 text-left font-black text-slate-900 text-base amount-cell">${formatMoney(billed)}</td>
-                    <td class="${showProfit ? '' : 'hidden'} py-4 px-4 text-left font-black text-violet-700 amount-cell">${side > 0 ? formatMoney(side) : '<span class="text-slate-300">-</span>'}</td>                    <td class="py-4 px-4 text-left font-extrabold text-base amount-cell ${remaining > 0 ? 'text-amber-600' : 'text-slate-400'}">${formatMoney(remaining)}</td>
+                    <td class="${showProfit ? '' : 'hidden'} py-4 px-4 text-left amount-cell">${side > 0 ? `<span class="inline-block px-2.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-800 border border-violet-300">${formatMoney(side)}</span>` : '<span class="text-slate-300">-</span>'}</td>                    <td class="py-4 px-4 text-left font-extrabold text-base amount-cell ${remaining > 0 ? 'text-amber-600' : 'text-slate-400'}">${formatMoney(remaining)}</td>
                     <td class="py-4 px-4 text-center">
                         ${isPaid 
                             ? `<span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">مكتمل</span>`
@@ -1692,7 +1692,7 @@
                         </div>
                         ${showProfit && side > 0 ? `<div class="min-w-0">
                             <span class="text-violet-700 block">🔒 لي (€):</span>
-                            <span class="amount-cell text-violet-700 text-sm font-black block">${formatMoney(side)}</span>
+                            <span class="amount-cell inline-block mt-0.5 px-2.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-800 border border-violet-300">${formatMoney(side)}</span>
                         </div>` : ''}
                     </div>
 

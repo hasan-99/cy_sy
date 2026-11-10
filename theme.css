@@ -29,6 +29,7 @@
 
     /* App-only tokens (light) */
     --accent-solid: oklch(0.55 0.14 233);
+    --accent-ink:   oklch(0.55 0.14 233);   /* blue text on tinted surfaces */
     --accent-line:  oklch(0.70 0.14 233 / 0.45);
     --chrome-bg:    oklch(0.26 0.03 260);   /* header + table head */
     --chrome-btn:   oklch(0.33 0.03 260);
@@ -62,6 +63,7 @@
 
     /* App-only tokens (dark) */
     --accent-solid: oklch(0.52 0.14 233);
+    --accent-ink:   oklch(0.80 0.12 233);
     --accent-line:  oklch(0.74 0.15 233 / 0.45);
     --chrome-bg:    oklch(0.238 0.020 260);
     --chrome-btn:   oklch(0.262 0.022 260);
@@ -129,7 +131,7 @@
   .border-emerald-500, .border-emerald-500\/40, .focus\:border-emerald-500:focus { border-color: var(--accent) !important; }
   .ring-emerald-500, .focus\:ring-emerald-500:focus { --tw-ring-color: var(--accent) !important; }
   .ring-sky-400 { --tw-ring-color: var(--accent) !important; }
-  .hover\:text-emerald-700:hover, .hover\:text-emerald-600:hover { color: var(--accent-solid) !important; }
+  .hover\:text-emerald-700:hover, .hover\:text-emerald-600:hover { color: var(--accent-ink) !important; }
 
   /* ---------- Success tints (paid / complete) ---------- */
   .bg-emerald-50, .bg-emerald-100 { background-color: var(--ok-bg) !important; }
@@ -153,10 +155,10 @@
   /* ---------- Info tints (blue / indigo / sky) ---------- */
   .bg-blue-50, .bg-blue-100, .bg-indigo-50, .bg-indigo-100, .bg-sky-50, .bg-sky-100 { background-color: var(--accent-bg) !important; }
   .bg-blue-700, .bg-blue-800, .bg-sky-500, .bg-sky-600 { background-color: var(--accent-solid) !important; }
-  .text-blue-100, .text-blue-700, .text-indigo-600, .text-indigo-700, .text-sky-700, .text-sky-800, .text-sky-950 { color: var(--accent-solid) !important; }
+  .text-blue-100, .text-blue-700, .text-indigo-600, .text-indigo-700, .text-sky-700, .text-sky-800, .text-sky-950 { color: var(--accent-ink) !important; }
   .border-blue-100, .border-indigo-100, .border-indigo-200, .border-sky-100, .border-sky-200, .border-sky-500 { border-color: var(--accent-line) !important; }
   .hover\:bg-blue-100:hover, .hover\:bg-blue-50:hover, .hover\:bg-violet-50:hover, .hover\:bg-violet-100:hover { background-color: var(--accent-bg) !important; }
-  .hover\:text-blue-700:hover, .hover\:text-violet-700:hover { color: var(--accent-solid) !important; }
+  .hover\:text-blue-700:hover, .hover\:text-violet-700:hover { color: var(--accent-ink) !important; }
 
   /* ---------- Private (violet) tints ---------- */
   .bg-violet-50, .bg-violet-100 { background-color: var(--priv-bg) !important; }
@@ -176,7 +178,7 @@
 
   /* ---------- The page's own small CSS rules ---------- */
   .filter-select-icon { color: var(--muted) !important; }
-  .filter-status .filter-select-icon { color: var(--accent-solid) !important; background: var(--accent-bg) !important; }
+  .filter-status .filter-select-icon { color: var(--accent-ink) !important; background: var(--accent-bg) !important; }
   .filter-sort .filter-select-icon { color: var(--priv-text) !important; background: var(--priv-bg) !important; }
 
   /* ---------- Theme switch button ---------- */
