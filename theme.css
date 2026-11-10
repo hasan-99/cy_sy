@@ -186,3 +186,10 @@
   .theme-toggle:hover { border-color: var(--accent); transform: scale(1.06); }
 }
 @media print { .theme-toggle { display: none !important; } }
+
+/* ---------- Brand mark (header) ---------- */
+@media screen {
+  .brand-word { font-family: "Archivo Black", "Cairo", sans-serif; letter-spacing: .03em; font-weight: 400; line-height: 1; }
+  .brand-accent { color: var(--accent); margin-inline-start: .18em; }
+  .app-brand-badge { font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 700; letter-spacing: .12em; font-size: .65rem; }
+}
